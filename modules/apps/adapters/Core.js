@@ -1146,6 +1146,32 @@ class Core {
 		return obj;
 	}
 
+	async getDictDocTypes( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDocTypes( user, packet.data );
+		return obj;
+	}
+	async createNewDocType( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.CreateNewTypeInDocTypesDictionary( user, packet.data );
+		return obj;
+	}
+	async getDictDocTypesSingleId( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDocTypeFromDocTypesDictionary( user, packet.data );
+		return obj;
+	}
+	async editDocType( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.EditDocTypeFromDocTypesDictionary( user, packet.data );
+		return obj;
+	}
+
+	async getStoreJournal( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetUniversalJournal( user, packet.data );
+		return obj;
+	}
 
 	// главный вход для api приложения
 	async appApi(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
@@ -1194,7 +1220,13 @@ class Core {
 					'createNewStore',
 					'editStore',
 
-					'getKladrByOneString'
+					'getKladrByOneString',
+
+					"getDictDocTypes",
+					"createNewDocType",
+					'getDictDocTypesSingleId',
+					"editDocType",
+					"getStoreJournal"
 				];
 
 				// let coreApi = new CoreApi(DATA);

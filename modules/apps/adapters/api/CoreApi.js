@@ -55,7 +55,8 @@ class CoreApi extends Api {
 				{id: 'units', table: 'dict_units', field: 'uid'},
 				{id: 'userGroups', table: 'user_groups', field: 'user_group_id'},
 				{id: 'user', table: 'user', field: 'uid'},
-				{id: 'stores', table: 'dict_stores', field: 'uid'}
+				{id: 'stores', table: 'dict_stores', field: 'uid'},
+				{id: 'docTypes', table: 'dict_doc_types', field: 'uid'}
 			]
 			let dict = dicts.find(item=> item.id == data.dict);
 			if ( typeof dict !== 'undefined' ) {
@@ -665,7 +666,135 @@ class CoreApi extends Api {
 		return obj;
 	}
 
-	
+	// справочнки типы документов для склада
+	async GetDocTypes( user, data ) {
+		console.log(`запрос GetDocTypes для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let rows = await this.Toolbox.sqlRequest(`skyline`, `
+				SELECT uid, title, status
+				FROM dict_doc_types
+				ORDER BY uid
+			`);
+			if ( rows.length > 0 ) obj.list = rows;
+			obj.status = 1;
+		}
+		return obj;
+	}
+	async CreateNewTypeInDocTypesDictionary( user, data ) {
+		console.log(`запрос CreateNewTypeInDocTypesDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let newDocTypeData = data.fields;
+			if (typeof newDocTypeData.title === "undefined" || newDocTypeData.title == "") obj.errs.push("Вы не указали наименование");
+			if (typeof newDocTypeData.status === "undefined" || newDocTypeData.status == "") obj.errs.push("Вы не указали статус");
+			if (obj.errs.length == 0) {
+				let max = 0;
+				let row = await this.Toolbox.sqlRequest('skyline', `SELECT MAX(uid) AS u FROM dict_doc_types`);
+				if (row.length > 0) max = row[0].u;
+				max++;
+				let result = await this.Toolbox.sqlRequest('skyline', `
+					INSERT INTO dict_doc_types 
+					SET uid='${max}', title = '${newDocTypeData.title}', status = '${newDocTypeData.status}'`
+				);
+				if (result.affectedRows == 1) {
+					obj.status = 1;
+				} else {
+					obj.errs.push("Ошибка добавления нового типа документа. Проверьте вводимые данные!");
+				}
+			}
+		}
+		return obj;
+	}
+	async GetDocTypeFromDocTypesDictionary( user, data ) {
+		console.log(`запрос GetDocTypeFromDocTypesDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.id !== 'undefined') {
+				let rows = await this.Toolbox.sqlRequest('skyline', `
+					SELECT uid, title, status
+					FROM dict_doc_types
+					WHERE uid = '${data.id}'
+				`);
+				if ( rows.length > 0 ) {
+					obj.list = rows;
+					obj.status = 1;
+				} else obj.errs.push( 'Запрошенная вами запись не существует!' );
+			} else obj.errs.push("Вы не указали, что запрашивать");
+		}
+		return obj;
+	}
+	async EditDocTypeFromDocTypesDictionary( user, data ) {
+		console.log(`запрос EditDocTypeFromDocTypesDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			console.log("data.fields=> ", data.fields);
+			let editDocTypeData = data.fields;
+			if (typeof editDocTypeData.uid === "undefined" || editDocTypeData.uid == "") obj.errs.push("Вы не указали uid");
+			if (!isNaN(parseFloat(editDocTypeData.status)) && isFinite(editDocTypeData.status)) {
+				let row = await this.Toolbox.sqlRequest('skyline', `
+					SELECT uid 
+					FROM dict_user_statuses 
+					WHERE uid = '${editDocTypeData.status}'`);
+				if (row.length == 0) obj.err.push('Указанное вами значение для поля "Статус" не содержится в справочнике!');
+			} else obj.errs.push('Поле "Статус" обязательно для заполнения!');
+			if (typeof editDocTypeData.title === "undefined" || editDocTypeData.title == "") obj.errs.push("Вы не указали наименование");
+			if (obj.errs.length == 0) {
+				let row = await this.Toolbox.sqlRequest('skyline', `
+					UPDATE dict_doc_types 
+					SET title = '${editDocTypeData.title}', status = '${editDocTypeData.status}'
+					WHERE uid = '${editDocTypeData.uid}'`);
+				if ( row.affectedRows == 1 ) { 
+					obj.status = 1;
+					obj.list.push({uid: editDocTypeData.uid, title: editDocTypeData.title, status: editDocTypeData.status});
+				}
+				else obj.errs.push('Редактирование записи завершилось с ошибкой!');
+			} 
+		}
+		return obj;
+	}
 
+	async GetUniversalJournal( user, data ) {
+		console.log(`запрос GetUniversalJournal для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let start, end;
+			let moment = this.Toolbox.getMoment();
+			if (typeof data.start == "undefined") start = moment(new Date(), "YYYY-MM-DD");
+			else {
+				start = moment(data.start, "YYYY-MM-DD");
+				if (!start.isValid()) obj.errs.push('Дата начала периода задана не верно!');
+			}
+			if (typeof data.end == "undefined") end = start;
+			else {
+				end = moment(data.end, "YYYY-MM-DD");
+				if (!end.isValid()) obj.errs.push('Дата окончания периода задана не верно!');
+			}
+			if (obj.errs.length == 0) {
+				let where = []; 
+				if (typeof data.type !== "undefined") where.push(`type = '${data.type}'`);
+				where.push(`date BETWEEN '${start.format("YYYY-MM-DD")} 00:00:00' AND '${end.format("YYYY-MM-DD")} 23:59:59'`);
+
+				let rows = await this.Toolbox.sqlRequest(`skyline`, `
+					SELECT id, type, date, creater, status
+					FROM journal
+					WHERE ${where.join(" AND ")}
+				`);
+				if ( rows.length > 0 ) obj.list = rows;
+				obj.status = 1;
+			}
+		}
+		return obj;
+	}
 }
 module.exports = CoreApi;
