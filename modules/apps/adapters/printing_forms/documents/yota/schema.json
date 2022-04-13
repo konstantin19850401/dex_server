@@ -1,0 +1,464 @@
+{
+	"ICC": {
+		"left": 171,
+		"top": 135,
+		"css": {
+			"width": 200,
+			"characterSpacing": 6.4
+		}
+	},
+	"DocCity": {
+		"left": 179,
+		"top": 170,
+		"css": {
+			"width": 300,
+			"characterSpacing": 2,
+			"size": 10
+		}
+	},
+	"LastName": {
+		"left": 110,
+		"top": 208,
+		"css": {
+			"width": 300,
+			"characterSpacing": 2,
+			"size": 10
+		}
+	},
+	"FirstName": {
+		"left": 92,
+		"top": 225,
+		"css": {
+			"width": 300,
+			"characterSpacing": 2,
+			"size": 10
+		}
+	},
+	"SecondName": {
+		"left": 109,
+		"top": 242,
+		"css": {
+			"width": 300,
+			"characterSpacing": 2,
+			"size": 10
+		}
+	},
+	"Birth": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 2
+				},
+				"left": 129,
+				"top": 261,
+				"width": 20				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 5
+				},
+				"left": 143,
+				"top": 261,
+				"width": 20				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 6,
+					"to": 10
+				},
+				"left": 157,
+				"top": 261,
+				"width": 30				
+			}
+		],
+		"css": {
+			"characterSpacing": 0.5,
+			"size": 10
+		}
+	},
+	"FizBirthPlace": {
+		"left": 135,
+		"top": 278,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocSeries": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["FizDocSeries", "FizDocNumber"],
+					"left": 124,
+					"top": 313,
+					"separator": " ",
+					"symbolSpace": "",
+					"fieldsAdd": {
+						"FizDocSeries": "",
+						"FizDocNumber": ""
+					}
+				}
+			}
+		],
+		"css": {
+			"width": 300,
+			"characterSpacing": 1,
+			"size": 10
+		}
+	},
+	"FizDocDate": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 2
+				},
+				"left": 317,
+				"top": 313,
+				"width": 20				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 5
+				},
+				"left": 330,
+				"top": 313,
+				"width": 20				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 6,
+					"to": 10
+				},
+				"left": 347,
+				"top": 313,
+				"width": 30				
+			}
+		],
+		"css": {
+			"characterSpacing": 0.5,
+			"size": 10
+		}
+	},
+	"FizDocOrg": {
+		"left": 117,
+		"top": 331,
+		"css": {
+			"width": 450,
+			"size": 10
+		}
+	},
+	"FizDocOrgCode": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 3
+				},
+				"left": 461,
+				"top": 313,
+				"width": 60				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 4,
+					"to": 7
+				},
+				"left": 491,
+				"top": 313,
+				"width": 60
+			}
+		],
+		"css": {
+			"characterSpacing": 0.5,
+			"size": 10
+		}
+	},
+	"FizDocCitizen": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "yota_doccountry",
+					"col_name": "doccountry_id", 
+					"left": 261,
+					"top": 260
+				}
+			}
+		],
+		"css": {
+			"width": 300,
+			"size": 10
+		}
+	},
+	"FizDocTypeResidence": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "yota_docresidence",
+					"col_name": "doc_id", 
+					"left": 269,
+					"top": 442
+				}
+			}
+		],
+		"ifkey": {
+			"key": "other_residence_doc",
+			"from": "document",
+			"value": "FizDocUnknownDoc"
+		},
+		"css": {
+			"width": 500,
+			"size": 9
+		}
+	},
+	"FizDocOtherDocTypes": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "yota_other_document_type",
+					"col_name": "id", 
+					"left": 223,
+					"top": 294
+				}
+			}
+		],
+		"css": {
+			"width": 500,
+			"size": 10
+		}
+	},
+	"FizDocResidenceDocSeries": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["FizDocResidenceDocSeries", "FizDocResidenceDocNumber"],
+					"left": 131,
+					"top": 459,
+					"separator": " ",
+					"symbolSpace": "",
+					"fieldsAdd": {
+						"FizDocResidenceDocSeries": "",
+						"FizDocResidenceDocNumber": ""
+					}
+				}
+			}
+		],
+		"css": {
+			"width": 300,
+			"characterSpacing": 1,
+			"size": 10
+		}
+	},
+	"FizDocResidenceStart": {
+		"left": 300,
+		"top": 459,
+		"ifkey": {
+			"from": "document",
+			"action": "ifEquality",
+			"key": "FizDocType",
+			"value": "passport_rf",
+			"text": ""
+		},
+		"css": {
+			"width": 100,
+			"size": 10
+		}
+	},
+	"FizDocResidenceEnd": {
+		"left": 487,
+		"top": 459,
+		"ifkey": {
+			"from": "document",
+			"action": "ifEquality",
+			"key": "FizDocType",
+			"value": "passport_rf",
+			"text": ""
+		},
+		"css": {
+			"width": 100,
+			"size": 10
+		}
+	},
+	"AddrCity": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["AddrState", "AddrCity"],
+					"left": 162,
+					"top": 366,
+					"separator": ", ",
+					"symbolSpace": " ",
+					"fieldsAdd": {
+						"AddrState": "",
+						"AddrCity": ""
+					}
+				}
+			}
+		],
+		"css": {
+
+		}
+	},
+	"AddrStreet": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["AddrStreet", "AddrHouse", "AddrBuilding", "AddrApartment"],
+					"left": 75,
+					"top": 384,
+					"separator": ", ",
+					"symbolSpace": " ",
+					"fieldsAdd": {
+						"AddrHouse": "д.",
+						"AddrApartment": "кв."
+					}
+				}
+			}
+		],
+		"css": {
+
+		}
+	},
+	"AddrPhone": {
+		"left": 107,
+		"top": 402,
+		"css": {
+			"width": 200,
+			"characterSpacing": 1
+		}
+	},
+	"DocDate": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 2
+				},
+				"left": 210,
+				"top": 109,
+				"width": 20				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 5
+				},
+				"left": 232,
+				"top": 109,
+				"width": 20				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 6,
+					"to": 10
+				},
+				"left": 255,
+				"top": 109,
+				"width": 30				
+			}
+		],
+		"css": {
+			"characterSpacing": 0.5,
+			"size": 11
+		}
+	},
+	"SellerId": {
+		"left": 503,
+		"top": 677,
+		"css": {
+			"width": 68,
+			"characterSpacing": 1,
+			"size": 10
+		}
+	},
+	"FIO": {
+		"variants": {
+			"action": "fio",
+			"mainField": "LastName",
+			"fields": ["FirstName", "SecondName"],
+			"left": 240,
+			"top": 677
+		},
+		"css": {
+			"width": 180,
+			"size": 10
+		}
+	},
+	"BARCODE": {
+		"variants": {
+			"action": "join",
+			"fields": ["ICC", "DocDate"],
+			"left": 500,
+			"top": 714
+		},
+		"css": {
+			"width": 72,
+			"height": 72,
+			"size": 25
+		}
+	},
+	"VARIATION": [
+		{
+			"field": "FizDocType",
+			"variants": [
+				{
+					"if": ["passport_rf"],
+					"action": "fix",
+					"text": "×",
+					"left": 72.5,
+					"top": 298,
+					"width": 10,
+					"size": 10
+				},
+				{
+					"if": ["passport_inostr", "diplomatic_passport"],
+					"action": "fix",
+					"text": "×",
+					"left": 149,
+					"top": 298,
+					"width": 100,
+					"size": 10,
+					"additionally": {
+						"table": "yota_document_type",
+						"action": "fromTable",
+						"where_col_name": "id",
+						"search_col_name": "title",
+						"left": 223,
+						"top": 296,
+						"width": 300,
+						"size": 10
+					}
+				},
+				{
+					"if": ["other"],
+					"action": "fix",
+					"text": "×",
+					"left": 149,
+					"top": 296,
+					"width": 100,
+					"size": 10
+				}
+			]
+		}
+	]
+}

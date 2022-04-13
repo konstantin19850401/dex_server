@@ -1,0 +1,150 @@
+{
+	"Birth": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 2
+				},
+				"left": 360,
+				"top": 129,
+				"width": 40				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 5
+				},
+				"left": 380,
+				"top": 129,
+				"width": 40
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 6,
+					"to": 11
+				},
+				"left": 397,
+				"top": 129,
+				"width": 80
+			}
+		],
+		"css": {
+			"characterSpacing": 2
+		}
+	},
+	"FizDocSeries": {
+		"left": 400,
+		"top": 107,
+		"css": {
+			"width": 300,
+			"characterSpacing": 3
+		}
+	},
+	"FizDocNumber": {
+		"left": 440,
+		"top": 107,
+		"css": {
+			"width": 300,
+			"characterSpacing": 3
+		}
+	},
+	"AddrStreet": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["AddrCity", "AddrStreet", "AddrHouse", "AddrBuilding", "AddrApartment"],
+					"left": 342,
+					"top": 146,
+					"separator": ", ",
+					"symbolSpace": " ",
+					"fieldsAdd": {
+						"AddrHouse": "д.",
+						"AddrApartment": "кв."
+					}
+				}
+			}
+		],
+		"css": {
+
+		}
+	},
+	"MSISDN": {
+		"left": 381,
+		"top": 87,
+		"css": {
+			"width": 300,
+			"size": 12,
+			"characterSpacing": 13
+		}
+	},
+	"LastName": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["LastName", "FirstName", "SecondName"],
+					"left": 300,
+					"top": 40,
+					"separator": " ",
+					"symbolSpace": " ",
+					"fieldsAdd": {}
+				}
+			}
+		],
+		"css": {
+			"width": 180,
+			"size": 10
+		}
+	},
+	"AssignedDPCode": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "registers",
+					"col_name": "rname",
+					"search": "mts_dpcode_prefix",
+					"join": "mts_dpcode_prefix",
+					"left": 170,
+					"top": 680,
+					"width": 250,
+					"characterSpacing": 15
+				}
+			},
+			{			
+				"text": {
+					"action": "dicts",
+					"dict": "registers",
+					"col_name": "rname",
+					"search": "dealer_code",
+					"left": 189,
+					"top": 727,
+					"width": 250,
+					"characterSpacing": 1
+				}
+			}
+		],
+		"css": {
+			"width": 180,
+			"size": 10,
+			"characterSpacing": 3
+		}
+	},
+	"FIXED_FIELDS": {
+		"FIELDS": [
+			{
+				"action": "fixed",
+				"text": "Алиева А.А.",
+				"left": 173,
+				"top": 702,
+				"width": 257,
+				"size": 11
+			}
+		]
+	}
+}

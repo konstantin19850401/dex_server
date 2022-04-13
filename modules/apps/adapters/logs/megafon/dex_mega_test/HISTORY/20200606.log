@@ -1,0 +1,85 @@
+
+12:20:21 Токен для профиля ofis_sk_new получен
+12:20:51 Токен для профиля ofis_sk_new получен
+12:24:50 Токен для профиля ofis_sk_new получен
+12:25:20 Токен для профиля ofis_sk_new получен
+12:28:49 Токен для профиля ofis_sk_new получен
+12:29:48 Токен для профиля ofis_sk_new получен
+12:30:18 Токен для профиля ofis_sk_new получен
+12:34:20 Токен для профиля ofis_sk_new получен
+11:42:49 Токен для профиля ofis_sk_new получен
+11:45:30 Токен для профиля ofis_sk_new получен
+11:48:43 Токен для профиля ofis_sk_new получен
+11:53:43 Токен для профиля ofis_sk_new получен
+14:37:53 Оператор megafon. База данных dex_mega_test. Для отправки найдено 1 договоров. Список id=> [{"id":1276657}]
+14:37:54 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+14:37:54 Критическая ошибка в процессе регистрации договора Тип ошибки=> TypeError, Описание=> Cannot read property 'DocCity' of undefined, Stack=> TypeError: Cannot read property 'DocCity' of undefined
+    at DOCUMENT_TO_CONTRACT.(anonymous function).split.reverse.map (/var/app/nodeapp/modules/apps/adapters/Contract.js:126:41)
+    at Array.map (<anonymous>)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:122:52)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:117:64)
+    at Contract.get megafon [as megafon] (/var/app/nodeapp/modules/apps/adapters/Contract.js:25:3)
+    at megafonAdapter.exportContractToMegafonV1 (/var/app/nodeapp/modules/apps/adapters/AdapterMegafon.js:103:28)
+    at <anonymous>
+    at process._tickCallback (internal/process/next_tick.js:189:7)
+14:37:54 Ошибка при экспорте документа 9289518796, Маржохова Елена Владимировна
+14:37:58 Есть старые на отправку. Список id=> ["'1276657'"]
+14:37:59 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+14:37:59 Критическая ошибка в процессе регистрации договора Тип ошибки=> TypeError, Описание=> Cannot read property 'DocCity' of undefined, Stack=> TypeError: Cannot read property 'DocCity' of undefined
+    at DOCUMENT_TO_CONTRACT.(anonymous function).split.reverse.map (/var/app/nodeapp/modules/apps/adapters/Contract.js:126:41)
+    at Array.map (<anonymous>)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:122:52)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:117:64)
+    at Contract.get megafon [as megafon] (/var/app/nodeapp/modules/apps/adapters/Contract.js:25:3)
+    at megafonAdapter.exportContractToMegafonV1 (/var/app/nodeapp/modules/apps/adapters/AdapterMegafon.js:103:28)
+    at <anonymous>
+    at process._tickCallback (internal/process/next_tick.js:189:7)
+14:37:59 Ошибка при экспорте документа 9289518796, Маржохова Елена Владимировна
+14:42:42 Есть старые на отправку. Список id=> ["'1276657'"]
+14:42:42 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+14:42:42 Критическая ошибка в процессе регистрации договора Тип ошибки=> TypeError, Описание=> Cannot read property 'DocCity' of undefined, Stack=> TypeError: Cannot read property 'DocCity' of undefined
+    at DOCUMENT_TO_CONTRACT.(anonymous function).split.reverse.map (/var/app/nodeapp/modules/apps/adapters/Contract.js:127:41)
+    at Array.map (<anonymous>)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:122:52)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:117:64)
+    at Contract.get megafon [as megafon] (/var/app/nodeapp/modules/apps/adapters/Contract.js:25:3)
+    at megafonAdapter.exportContractToMegafonV1 (/var/app/nodeapp/modules/apps/adapters/AdapterMegafon.js:103:28)
+    at <anonymous>
+    at process._tickCallback (internal/process/next_tick.js:189:7)
+14:42:42 Ошибка при экспорте документа 9289518796, Маржохова Елена Владимировна
+14:43:24 Есть старые на отправку. Список id=> ["'1276657'"]
+14:43:25 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+14:43:25 Критическая ошибка в процессе регистрации договора Тип ошибки=> TypeError, Описание=> Cannot read property 'DocCity' of undefined, Stack=> TypeError: Cannot read property 'DocCity' of undefined
+    at DOCUMENT_TO_CONTRACT.(anonymous function).split.reverse.map (/var/app/nodeapp/modules/apps/adapters/Contract.js:126:132)
+    at Array.map (<anonymous>)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:122:52)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:117:64)
+    at Contract.get megafon [as megafon] (/var/app/nodeapp/modules/apps/adapters/Contract.js:25:3)
+    at megafonAdapter.exportContractToMegafonV1 (/var/app/nodeapp/modules/apps/adapters/AdapterMegafon.js:103:28)
+    at <anonymous>
+    at process._tickCallback (internal/process/next_tick.js:189:7)
+14:43:25 Ошибка при экспорте документа 9289518796, Маржохова Елена Владимировна
+14:44:22 Есть старые на отправку. Список id=> ["'1276657'"]
+14:44:23 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+14:44:23 Критическая ошибка в процессе регистрации договора Тип ошибки=> TypeError, Описание=> Cannot read property 'DocCity' of undefined, Stack=> TypeError: Cannot read property 'DocCity' of undefined
+    at DOCUMENT_TO_CONTRACT.(anonymous function).split.reverse.map (/var/app/nodeapp/modules/apps/adapters/Contract.js:127:132)
+    at Array.map (<anonymous>)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:123:52)
+    at parseObj (/var/app/nodeapp/modules/apps/adapters/Contract.js:118:64)
+    at Contract.get megafon [as megafon] (/var/app/nodeapp/modules/apps/adapters/Contract.js:26:3)
+    at megafonAdapter.exportContractToMegafonV1 (/var/app/nodeapp/modules/apps/adapters/AdapterMegafon.js:103:28)
+    at <anonymous>
+    at process._tickCallback (internal/process/next_tick.js:189:7)
+14:44:23 Ошибка при экспорте документа 9289518796, Маржохова Елена Владимировна
+14:59:21 Есть старые на отправку. Список id=> ["'1276657'"]
+14:59:22 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+14:59:22 Документ был экспортирован удачно! 9289518796, Маржохова Елена Владимировна
+14:59:51 Есть старые на отправку. Список id=> ["'1276657'"]
+14:59:51 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+14:59:51 Документ был экспортирован удачно! 9289518796, Маржохова Елена Владимировна
+15:01:11 Есть старые на отправку. Список id=> ["'1276657'"]
+15:01:12 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+15:01:12 Документ был экспортирован удачно! 9289518796, Маржохова Елена Владимировна
+15:23:32 Есть старые на отправку. Список id=> ["'1276657'"]
+15:23:32 Отправляем документ. Дайджест=> 9289518796, Маржохова Елена Владимировна
+15:23:32 Документ был экспортирован удачно! 9289518796, Маржохова Елена Владимировна

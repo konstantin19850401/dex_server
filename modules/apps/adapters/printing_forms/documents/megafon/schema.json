@@ -1,0 +1,325 @@
+{
+	"DocDate": {
+		"left": 270,
+		"top": 70,
+		"css": {
+			"width": 300,
+			"size": 11
+		}
+	},
+	"DocCity": {
+		"left": 150,
+		"top": 157.5,
+		"css": {
+			"width": 300
+		}
+	},
+	"IntPlanPrn": {
+		"left": 103,
+		"top": 194,
+		"css": {
+			"width": 300
+		}
+	},
+	"MSISDN": {
+		"left": 418,
+		"top": 207,
+		"css": {
+			"width": 300
+		}
+	},
+	"DealerCode": {
+		"left": 459,
+		"top": 178,
+		"css": {
+			"width": 300
+		}
+	},
+	"ICC": {
+		"left": 105,
+		"top": 208,
+		"css": {
+			"width": 300
+		}
+	},
+	"sbms_paccount": {
+		"left": 95,
+		"top": 223,
+		"css": {
+			"width": 300
+		}
+	},
+	"LastName": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["LastName", "FirstName", "SecondName"],
+					"left": 80,
+					"top": 281,
+					"separator": " ",
+					"symbolSpace": " ",
+					"fieldsAdd": {
+						"LastName": "",
+						"FirstName": ""
+					}
+				}
+			}
+		],
+		"css": {
+
+		}
+	},
+	"Birth": {
+		"left": 98,
+		"top": 317,
+		"css": {
+			"width": 257
+		}
+	},
+	"FizBirthPlace": {
+		"left": 301,
+		"top": 317,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocSeries": {
+		"left": 65,
+		"top": 379,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocNumber": {
+		"left": 190,
+		"top": 379,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocDate": {
+		"left": 452,
+		"top": 379,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocOrg": {
+		"left": 81,
+		"top": 395,
+		"css": {
+			"width": 450,
+			"size": 8
+		}
+	},
+	"FizDocOrgCode": {
+		"left": 471,
+		"top": 413,
+		"css": {
+			"size": 10
+		}
+	},
+	"AddrCity": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["AddrState", "AddrCity"],
+					"left": 157,
+					"top": 459,
+					"separator": ", ",
+					"symbolSpace": " ",
+					"fieldsAdd": {
+						"AddrState": "",
+						"AddrCity": ""
+					}
+				}
+			}
+		],
+		"css": {
+
+		}
+	},
+	"AddrStreet": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["AddrStreet", "AddrHouse", "AddrBuilding", "AddrApartment"],
+					"left": 160,
+					"top": 470,
+					"separator": ", ",
+					"symbolSpace": " ",
+					"fieldsAdd": {
+						"AddrHouse": "д.",
+						"AddrApartment": "кв."
+					}
+				}
+			}
+		],
+		"css": {
+
+		}
+	},
+	"AddrPhone": {
+		"left": 137,
+		"top": 541.5,
+		"css": {
+			"width": 257
+		}
+	},
+	"CodeWord": {
+		"left": 375,
+		"top": 541.5,
+		"css": {
+			"width": 257
+		}
+	},
+	"BARCODE": {
+		"variants": {
+			"action": "join",
+			"fields": ["MSISDN", "sbms_paccount"],
+			"left": 210,
+			"top": 10,
+			"preText": "01",
+			"includetext": {
+				"left": 38,
+				"top": 27,
+				"size": 10,
+				"width": 300
+			}
+		},
+		"css": {
+			"width": 210,
+			"height": 25,
+			"size": 25
+		}
+	},
+	"FIO": {
+		"variants": {
+			"action": "fio",
+			"mainField": "LastName",
+			"fields": ["FirstName", "SecondName"],
+			"left": 315,
+			"top": 717
+		},
+		"css": {
+			"width": 180
+		}
+	},
+	"VARIATION": [
+		{
+			"field": "FizDocType",
+			"variants": [
+				{
+					"if": [1],
+					"action": "fix",
+					"text": "×",
+					"left": 99,
+					"top": 358.5,
+					"width": 10,
+					"size": 20
+				},
+				{
+					"if": [3,4,8,100,101,102,103,104,105,106,107,108,1020],
+					"action": "fix",
+					"text": "×",
+					"left": 198,
+					"top": 358.5,
+					"width": 10,
+					"size": 20
+				},
+				{
+					"if": [3,4,8,100,101,102,103,104,105,106,107,108,1020],
+					"action": "frombase",
+					"table": "gf_identity_doc_types",
+					"where_col_name": "identityDocTypeId",
+					"search_col_name": "name",
+					"left": 285,
+					"top": 363,
+					"width": 200,
+					"size": 11
+				}
+			]
+		}
+	],
+	"FIXED_FIELDS": {
+		"FIELDS": [
+			{
+				"action": "fixed",
+				"text": "×",
+				"left": 507,
+				"top": 616,
+				"width": 10,
+				"size": 13
+			},
+			{
+				"action": "fixed",
+				"text": "×",
+				"left": 507,
+				"top": 629,
+				"width": 10,
+				"size": 13
+			},
+			{
+				"action": "fixed",
+				"text": "от",
+				"left": 250,
+				"top": 68,
+				"width": 30,
+				"size": 13
+			},
+			{
+				"action": "fixed",
+				"text": "от",
+				"left": 149,
+				"top": 179,
+				"width": 30,
+				"size": 10
+			}
+		]
+	},
+	"FIELDS": [
+		{
+			"action": "frombase",
+			"text": "MainDealerName",
+			"table": "registers",
+			"where_col_name": "rname",
+			"search_col_name": "rvalue",
+			"left": 151,
+			"top": 128,
+			"width": 200
+		},
+		{
+			"action": "frombase",
+			"text": "MainDealerFIO",
+			"table": "registers",
+			"where_col_name": "rname",
+			"search_col_name": "rvalue",
+			"left": 123,
+			"top": 143,
+			"width": 200
+		},
+		{
+			"action": "frombase",
+			"text": "MainDealerPowAt",
+			"table": "registers",
+			"where_col_name": "rname",
+			"search_col_name": "rvalue",
+			"left": 108,
+			"top": 179,
+			"width": 200
+		},
+		{
+			"action": "frombase",
+			"text": "MainDealerDatePowAt",
+			"table": "registers",
+			"where_col_name": "rname",
+			"search_col_name": "rvalue",
+			"left": 165,
+			"top": 179,
+			"width": 200
+		}
+	]
+}

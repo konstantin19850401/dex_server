@@ -1,0 +1,428 @@
+{
+	"CodeWord": {
+		"left": 8,
+		"top": 177,
+		"css": {
+			"width": 257
+		}
+	},
+	"Plan": {
+		"left": 8,
+		"top": 211,
+		"css": {
+			"width": 257
+		}
+	},
+	"LastName": {
+		"left": 45,
+		"top": 324,
+		"css": {
+			"width": 257
+		}
+	},
+	"FirstName": {
+		"left": 45,
+		"top": 347,
+		"css": {
+			"width": 257
+		}
+	},
+	"SecondName": {
+		"left": 45,
+		"top": 371,
+		"css": {
+			"width": 257
+		}
+	},
+	"Birth": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 2
+				},
+				"left": 10,
+				"top": 407,
+				"width": 40				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 5
+				},
+				"left": 44,
+				"top": 407,
+				"width": 40
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 6,
+					"to": 11
+				},
+				"left": 79,
+				"top": 407,
+				"width": 80
+			}
+		],
+		"css": {
+			"characterSpacing": 10
+		}
+	},
+	"Sex": {
+		"variants": [
+			{
+				"text": {
+					"action": "list",
+					"list": {
+						"0": {
+							"title": "×",
+							"left": 161,
+							"top": 401,
+							"width": 10
+						},
+						"1": {
+							"title": "×",
+							"left": 161,
+							"top": 411,
+							"width": 10
+						}
+					}
+				}
+			}
+		],
+		"css": {
+			"characterSpacing": 2
+		}
+	},
+	"FizBirthPlace": {
+		"left": 7,
+		"top": 450,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocSeries": {
+		"left": 48,
+		"top": 542,
+		"css": {
+			"width": 300,
+			"characterSpacing": 13
+		}
+	},
+	"FizDocNumber": {
+		"left": 10,
+		"top": 576,
+		"css": {
+			"width": 300,
+			"characterSpacing": 8.5
+		}
+	},
+	"FizDocOrg": {
+		"left": 210,
+		"top": 17,
+		"css": {
+			"width": 180,
+			"size": 7.5
+		}
+	},
+	"FizDocOrgCode": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 3
+				},
+				"left": 296,
+				"top": 111,
+				"width": 60				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 4,
+					"to": 7
+				},
+				"left": 351,
+				"top": 111,
+				"width": 60
+			}
+		],
+		"css": {
+			"characterSpacing": 8.5
+		}
+	},
+	"FizDocDate": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 2
+				},
+				"left": 265,
+				"top": 58,
+				"width": 40				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 5
+				},
+				"left": 300,
+				"top": 58,
+				"width": 40
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 6,
+					"to": 11
+				},
+				"left": 335,
+				"top": 58,
+				"width": 80
+			}
+		],
+		"css": {
+			"characterSpacing": 8.5
+		}
+	},
+	"AddrZip": {
+		"left": 210,
+		"top": 111,
+		"css": {
+			"width": 300,
+			"characterSpacing": 8.5
+		}
+	},
+	"AddrState": {
+		"left": 208,
+		"top": 142,
+		"css": {
+			"width": 300
+		}
+	},
+	"AddrRegion": {
+		"left": 208,
+		"top": 170,
+		"css": {
+			"width": 300
+		}
+	},
+	"AddrCity": {
+		"left": 208,
+		"top": 207,
+		"css": {
+			"width": 300
+		}
+	},
+	"AddrStreet": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["AddrStreet", "AddrHouse", "AddrBuilding", "AddrApartment"],
+					"left": 208,
+					"top": 240,
+					"separator": ", ",
+					"symbolSpace": " ",
+					"fieldsAdd": {
+						"AddrHouse": "д.",
+						"AddrApartment": "кв."
+					}
+				}
+			}
+		],
+		"css": {
+
+		}
+	},
+	"DocDate": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 2
+				},
+				"left": 660,
+				"top": 394,
+				"width": 40				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 5
+				},
+				"left": 695,
+				"top": 394,
+				"width": 40
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 6,
+					"to": 11
+				},
+				"left": 730,
+				"top": 394,
+				"width": 80
+			}
+		],
+		"css": {
+			"characterSpacing": 8.5
+		}
+	},
+	"MSISDN": {
+		"left": 603,
+		"top": 50,
+		"css": {
+			"width": 300,
+			"size": 12
+		}
+	},
+	"ICC": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["ICC", "ICCCTL"],
+					"left": 603,
+					"top": 20,
+					"separator": "",
+					"symbolSpace": "",
+					"fieldsAdd": {
+						"ICC": "",
+						"ICCCTL": ""
+					},
+					"width": 380
+				}
+			}
+		],
+		"css": {
+			"width": 380,
+			"size": 12
+		}
+	},
+	"FizDocType": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "mts_doctype",
+					"col_name": "doctype_id",
+					"left": 7,
+					"top": 484,
+					"tag": "_"
+				}
+			}
+		],
+		"css": {
+			"width": 180,
+			"size": 10
+		}
+	},
+	"FizDocCitizen": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "mts_doccountry",
+					"col_name": "doccountry_id", 
+					"left": 7,
+					"top": 520,
+					"tag": "$"
+				}
+			}
+		],
+		"css": {
+			"width": 180,
+			"size": 10
+		}
+	},
+	"AssignedDPCode": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "registers",
+					"col_name": "rname",
+					"search": "mts_dpcode_prefix",
+					"join": "mts_dpcode_prefix",
+					"left": 455,
+					"top": 473,
+					"width": 180,
+					"characterSpacing": 9.5
+				}
+			},
+			{			
+				"text": {
+					"action": "dicts",
+					"dict": "registers",
+					"col_name": "rname",
+					"search": "dealer_code",
+					"left": 410,
+					"top": 515,
+					"width": 180,
+					"characterSpacing": 2
+				}
+			}
+		],
+		"css": {
+			"width": 180,
+			"size": 10,
+			"characterSpacing": 9.5
+		}
+	},
+	"BARCODE": {
+		"variants": {
+			"action": "join",
+			"fields": ["ICC", "ICCCTL", "MSISDN"],
+			"left": 407,
+			"top": 34
+		},
+		"css": {
+			"width": 180,
+			"height": 25,
+			"size": 25
+		}
+	},
+	"FIO": {
+		"variants": {
+			"action": "fio",
+			"mainField": "LastName",
+			"fields": ["FirstName", "SecondName"],
+			"left": 643,
+			"top": 458
+		},
+		"css": {
+			"width": 180,
+			"size": 10
+		}
+	},
+	"DEALER_NAME": {
+		"variants": [
+			{
+				"text": {
+					"action": "dicts",
+					"dict": "registers",
+					"col_name": "rname",
+					"search": "dealer_code",
+					"left": 410,
+					"top": 500	
+				}
+			}
+		],
+		"css": {
+			"width": 180,
+			"size": 10,
+			"characterSpacing": 9.5
+		}
+	}
+}

@@ -1,0 +1,352 @@
+{
+	"DocCity": {
+		"left": 307,
+		"top": 68,
+		"css": {
+			"width": 300,
+			"size": 11
+		}
+	},
+	"DocDate": {
+		"left": 295,
+		"top": 85.3,
+		"css": {
+			"width": 300,
+			"size": 11
+		}
+	},
+	"AssignedDPCode": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["AssignedDPCode", "DocNum"],
+					"left": 113,
+					"top": 84.3,
+					"separator": "  ",
+					"symbolSpace": "",
+					"fieldsAdd": {
+						"ContactPhonePrefix": "",
+						"ContactPhone": ""
+					}
+				}
+			}
+		],
+		"css": {
+			"width": 257,
+			"size": 11
+		}
+	},
+	"LastName": {
+		"left": 89,
+		"top": 154,
+		"css": {
+			"width": 300
+		}
+	},
+	"FirstName": {
+		"left": 89,
+		"top": 172,
+		"css": {
+			"width": 257
+		}
+	},
+	"SecondName": {
+		"left": 342,
+		"top": 172,
+		"css": {
+			"width": 257
+		}
+	},
+	"FizBirthPlace": {
+		"left": 129,
+		"top": 190,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocDate": {
+		"left": 77,
+		"top": 274,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocOrg": {
+		"left": 77,
+		"top": 257,
+		"css": {
+			"width": 900,
+			"size": 8
+		}
+	},
+	"FizDocOrgCode": {
+		"left": 479,
+		"top": 274,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocSeries": {
+		"left": 405,
+		"top": 236,
+		"css": {
+			"width": 300
+		}
+	},
+	"FizDocNumber": {
+		"left": 484,
+		"top": 236,
+		"css": {
+			"width": 300
+		}
+	},
+	"Birth": {
+		"left": 429,
+		"top": 190,
+		"css": {
+			"width": 257
+		}
+	},
+	"Sex": {
+		"variants": [
+			{
+				"text": {
+					"action": "list",
+					"list": {
+						"0": {
+							"title": "×",
+							"left": 507.5,
+							"top": 147,
+							"width": 10
+						},
+						"1": {
+							"title": "×",
+							"left": 560,
+							"top": 147,
+							"width": 10
+						}
+					}
+				}
+			}
+		],
+		"css": {
+			"characterSpacing": 2,
+			"size": 20
+		}
+	},
+	"AddrZip": {
+		"left": 209,
+		"top": 358,
+		"css": {
+			"width": 257
+		}
+	},
+	"AddrCountry": {
+		"left": 346,
+		"top": 358,
+		"css": {
+			"width": 257
+		}
+	},
+	"AddrState": {
+		"left": 84,
+		"top": 378,
+		"css": {
+			"width": 257,
+			"size": 7
+		}
+	},
+	"AddrRegion": {
+		"left": 245,
+		"top": 352,
+		"css": {
+			"width": 257
+		}
+	},
+	"AddrCity": {
+		"left": 420,
+		"top": 376,
+		"css": {
+			"width": 257
+		}
+	},
+	"AddrStreet": {
+		"left": 75,
+		"top": 394,
+		"css": {
+			"width": 257
+		}
+	},
+	"AddrHouse": {
+		"left": 344,
+		"top": 394,
+		"css": {
+			"width": 257
+		}
+	},
+	"AddrBuilding": {
+		"left": 468,
+		"top": 394,
+		"css": {
+			"width": 257
+		}
+	},
+	"AddrApartment": {
+		"left": 550,
+		"top": 394,
+		"css": {
+			"width": 257
+		}
+	},
+	"PlanPrn": {
+		"left": 124,
+		"top": 424,
+		"css": {
+			"width": 257,
+			"size": 8
+		}
+	},
+	"MSISDN": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 0,
+					"to": 3
+				},
+				"left": 424,
+				"top": 423,
+				"width": 50				
+			},
+			{
+				"text": {
+					"action": "substring",
+					"from": 3,
+					"to": 10
+				},
+				"left": 475,
+				"top": 423,
+				"width": 110
+			}
+		],
+		"css": {
+			"characterSpacing": 8.5
+		}
+	},
+	"ICC": {
+		"variants": [
+			{
+				"text": {
+					"action": "substring",
+					"from": 7,
+					"to": 18
+				},
+				"left": 250,
+				"top": 458,
+				"width": 300
+			}
+		],
+		"css": {
+			"characterSpacing": 6.5,
+			"size": 14
+		}
+	},
+	"ContactPhone": {
+		"variants": [
+			{
+				"text": {
+					"action": "join",
+					"fields": ["MSISDN"],
+					"left": 189,
+					"top": 441,
+					"separator": "",
+					"symbolSpace": "",
+					"fieldsAdd": {
+						"ContactPhonePrefix": "",
+						"ContactPhone": ""
+					}
+				}
+			}
+		],
+		"css": {
+			"width": 257
+		}
+	},
+	"BARCODE": {
+		"variants": {
+			"action": "join",
+			"fields": ["ICC"],
+			"left": 399,
+			"top": 5,
+			"includetext": {
+				"left": 38,
+				"top": 36,
+				"size": 10,
+				"width": 200
+			}
+		},
+		"css": {
+			"width": 176,
+			"height": 36,
+			"size": 25
+		}
+	},
+	"FIXED_FIELDS": {
+		"FIELDS": [
+			{
+				"action": "fixed",
+				"text": "Российская Федерация",
+				"left": 101,
+				"top": 67,
+				"width": 257,
+				"size": 11
+			},
+			{
+				"action": "fixed",
+				"text": "×",
+				"left": 38,
+				"top": 124,
+				"width": 20,
+				"size": 20
+			}
+		]
+	},
+	"FIO": {
+		"variants": {
+			"action": "fio",
+			"mainField": "LastName",
+			"fields": ["FirstName", "SecondName"],
+			"left": 333,
+			"top": 661
+		},
+		"css": {
+			"width": 180,
+			"size": 10
+		}
+	},
+	"VARIATION": [
+		{
+			"field": "CitizenType",
+			"variants": [
+				{
+					"if": [1],
+					"action": "fix",
+					"text": "×",
+					"left": 128,
+					"top": 203,
+					"width": 20,
+					"size": 20
+				},
+				{
+					"if": [0],
+					"action": "docField",
+					"text": "CitizenshipText",
+					"left": 180,
+					"top": 209,
+					"width": 200
+				}
+			]
+		}
+	]
+}
