@@ -1,1 +1,3 @@
+#except pdf files
+!*.pdf
 node_modules/
