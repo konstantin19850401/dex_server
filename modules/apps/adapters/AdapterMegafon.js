@@ -6,11 +6,13 @@ let Contract = require('./Contract');
 let moment = require("moment");
 
 class AdapterMegafon extends Adapter {
-	constructor(obj) {
+	#core;
+	constructor(obj, core) {
 		super(obj);
 		that = this;
 		this.receivingTokens = false;
 		this.countFiledTokenRequest = 1; // допустимое количество неудачных попыток запроса токена до блокировки профиля
+		this.#core = core;
 	}
 	async updateTokens() {
 		//статусы токена -1(заблокирован), 0(ок), 1(требуется обновить токен), 2(осуществляется обновление токена)
@@ -538,7 +540,7 @@ class AdapterMegafon extends Adapter {
         return row;
     }
     async apiCommands(packet, user) {
-        if (Api[packet.data.action] != undefined) return await Api[packet.data.action](packet, this.toolbox, this.base, user, this);
+        if (Api[packet.data.action] != undefined) return await Api[packet.data.action](packet, this.toolbox, this.base, user, this, this.getSchemas, this.dicts, this.#core);
         else return {err: 'Такого метода не существует'};
     }
  //    apiGetCommands(req, res) {

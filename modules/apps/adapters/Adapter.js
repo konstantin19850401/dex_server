@@ -11,7 +11,7 @@ const xml2js = require('xml2js');
 let logging = require('./Logging');
 
 class Adapter {
-	constructor(obj) {
+	constructor(obj, core) {
 		for (let key in obj) this[key] = obj[key];
 		// переменные класса
 		this.cntDocuments = 50;

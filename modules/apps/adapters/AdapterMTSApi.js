@@ -8,7 +8,7 @@ class AdapterMTSApi {
 	constructor() {
 		this.docid = 'DEXPlugin.Document.MTS.Jeans';
 	}
-    async list(packet, toolbox, base, user, adapter) {
+    async list(packet, toolbox, base, user, adapter, schemas, dicts, core) {
         // console.log("list ", base);
         console.log('запрос');
         let obj = {};
@@ -79,12 +79,28 @@ class AdapterMTSApi {
                         }
                     }
 
+                    let dicts = core.DictsByNames(["docStatuses","stores"]);
+                    let docStatuses = dicts.find(item=> item.name == "docStatuses");
+                    let stores = dicts.find(item=> item.name == "stores");
+                        
                     for (let i=0; i<result.length;i++) {
                         let row = result[i];
                         let fields = {};
                         fields.id = row.id;
                         fields.status = row.status;
+                        for (let j = 0; j <docStatuses.list.length; j++) {
+                            if (row.status == docStatuses.list[j].uid) { 
+                                fields.status = docStatuses.list[j].title;
+                                break;
+                            }
+                        }
                         fields.unitid = row.unitid;
+                        for (let j = 0; j <stores.list.length; j++) {
+                            if (row.unitid == stores.list[j].dex_uid) { 
+                                fields.unitid = stores.list[j].title;
+                                break;
+                            }
+                        }
                         fields.digest = row.digest;
                         fields.docid = row.docid;
                         fields.jdocdate = row.jdocdate;
@@ -170,6 +186,20 @@ class AdapterMTSApi {
             } else {
                 err.push('Параметр list не может отсутствовать');
             }
+        } else if (packet.data.subaction === 'document.print.doc') {
+            if (typeof packet.data.list !== 'undefined') {
+                obj.subaction = packet.data.subaction;
+                if (packet.data.list.length > 0) {
+                    let prt = await this.printForm(packet, toolbox, base, user);
+                    obj.link = prt.link;
+                    obj.base = packet.data.base;
+                    // console.log("prt=> ", prt);
+                } else {
+                    err.push('Вы не указали документы, которые следует распечатать');
+                }
+            } else {
+                err.push('Параметр list не может отсутствовать');
+            }
         } else {
             err.push('Выбранная зацепка не обрабатывается');
         }
@@ -193,7 +223,10 @@ class AdapterMTSApi {
 	            bufferPages: true
 	        });
 
-            doc.pipe(fs.createWriteStream(`${__dirname}/printing_forms/temp/mts_1212121212.pdf`));
+            let hash = toolbox.getHash();
+            obj.link = `mts_${hash}.pdf`;
+
+            doc.pipe(fs.createWriteStream(`${__dirname}/printing_forms/temp/mts_${hash}.pdf`));
 
             for (let row of rows) {
             	// console.log(row);

@@ -5,11 +5,13 @@ let Api = new (require('./AdapterMTSApi'))();
 let Contract = require('./Contract');
 
 class AdapterMTS extends Adapter {
-	constructor(obj) {
+    #core;
+	constructor(obj, core) {
 		super(obj);
         that = this;
         this.dicts = [];
         this.docid = 'DEXPlugin.Document.MTS.Jeans';
+        this.#core = core;
         setTimeout(()=> this.Init(), 2000);
 	}
     get Dicts() {return this.dicts;};
@@ -77,7 +79,7 @@ class AdapterMTS extends Adapter {
     }
     async apiCommands(packet, user) {
         // if (Api[packet.data.action] != undefined) return await Api[packet.data.action](packet, this.toolbox, this.base, user, this);
-        if (Api[packet.data.action] != undefined) return await Api[packet.data.action](packet, this.toolbox, this.base, user, this, this.getSchemas, this.dicts);
+        if (Api[packet.data.action] != undefined) return await Api[packet.data.action](packet, this.toolbox, this.base, user, this, this.getSchemas, this.dicts, this.#core);
         else return {err: 'Такого метода не существует'};
     }
     // apiGetCommands(req, res) {

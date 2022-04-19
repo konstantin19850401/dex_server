@@ -43,6 +43,23 @@ class CoreApi extends Api {
 		return obj;
 	}
 	// РАБОТА СО СПРАВОЧНИКАМИ
+	GetDicts( user, data ) {
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (Array.isArray(data.dicts)) {
+				let dicts = this.#core.DictsByNames(data.dicts);
+				if (dicts.length > 0) {
+					for (let i = 0; i < dicts.length; i++) {
+						obj.list.push({name: dicts[i].name, list: dicts[i].list});
+					}
+					obj.status = 1;
+				}
+			} else obj.errs.push('Запрашиваемые справочники должны передаваться массивом');
+		}
+		return obj;
+	}
 	
 	// удаление записи из справочника
 	async DeleteItemFromDictionary( user, data ) {
@@ -462,7 +479,7 @@ class CoreApi extends Api {
 				SELECT dict_stores.uid, dict_stores.dex_uid, dict_stores.title, dict_stores.parent, dict_stores.status, dict_units.title AS parent_title
 				FROM dict_stores
 				LEFT JOIN dict_units ON dict_units.uid = dict_stores.parent
-				ORDER BY dict_stores.uid 
+				ORDER BY dict_stores.title 
 			`);
 			if ( rows.length > 0 ) obj.list = rows;
 			obj.status = 1;
@@ -514,7 +531,7 @@ class CoreApi extends Api {
 					if (regions.length > 0) {
 						// теперь проверим, есть ли торговая точка с тем же dex_uid
 						if (typeof newStoreData.dex_uid !== 'undefined' && newStoreData.dex_uid !== '') {
-							let dexUidRow = await this.Toolbox.sqlRequest('sqyline', `
+							let dexUidRow = await this.Toolbox.sqlRequest('skyline', `
 								SELECT uid 
 								FROM dict_stores
 								WHERE dex_uid = '${newStoreData.dex_uid}'
@@ -550,6 +567,8 @@ class CoreApi extends Api {
 							} else {
 								obj.errs.push("Ошибка добавления новой торговой точки. Проверьте вводимые данные!");
 							}
+							// обновим справочники
+							this.#core.newInitDicts();
 						}
 					} else obj.errs.push("Указанный Вами регион не существует или не активен!");
 				} else obj.errs.push("Указанное Вами отделение не существует!");
@@ -770,27 +789,59 @@ class CoreApi extends Api {
 		else {
 			let start, end;
 			let moment = this.Toolbox.getMoment();
-			if (typeof data.start == "undefined") start = moment(new Date(), "YYYY-MM-DD");
-			else {
-				start = moment(data.start, "YYYY-MM-DD");
+			if (typeof data.start === "undefined") { 
+				console.log("start не существует ", data);
+				start = moment(new Date(), "YYYY-MM-DD");
+			} else {
+				console.log("start существует");
+				start = moment(data.start, "YYYYMMDD");
 				if (!start.isValid()) obj.errs.push('Дата начала периода задана не верно!');
 			}
-			if (typeof data.end == "undefined") end = start;
+			if (typeof data.end === "undefined") end = start;
 			else {
-				end = moment(data.end, "YYYY-MM-DD");
+				end = moment(data.end, "YYYYMMDD");
 				if (!end.isValid()) obj.errs.push('Дата окончания периода задана не верно!');
 			}
+			console.log("start=> ", start);
 			if (obj.errs.length == 0) {
 				let where = []; 
 				if (typeof data.type !== "undefined") where.push(`type = '${data.type}'`);
 				where.push(`date BETWEEN '${start.format("YYYY-MM-DD")} 00:00:00' AND '${end.format("YYYY-MM-DD")} 23:59:59'`);
-
 				let rows = await this.Toolbox.sqlRequest(`skyline`, `
-					SELECT id, type, date, creater, status
+					SELECT id, type, date, creater, target, status
 					FROM journal
 					WHERE ${where.join(" AND ")}
 				`);
-				if ( rows.length > 0 ) obj.list = rows;
+				if (rows.length > 0) { 
+					// так как будут uid пользователей, было бы фигово их передавать в открытом виде. Превратим в usernames
+					let dicts = this.#core.DictsByNames(["users","docTypes","stores"]);
+					if (dicts.length > 0) {
+						let users = dicts.find(item=> item.name == "users");
+						let docTypes = dicts.find(item=> item.name == "docTypes");
+						let stores = dicts.find(item=> item.name == "stores");
+						for (let i = 0; i < rows.length; i++) {
+							for (let j = 0; j <users.list.length; j++) {
+								if (rows[i].creater == users.list[j].uid) { 
+									rows[i].creater = users.list[j].username;
+									break;
+								}
+							}
+							for (let j = 0; j <docTypes.list.length; j++) {
+								if (rows[i].type == docTypes.list[j].uid) { 
+									rows[i].type = docTypes.list[j].title;
+									break;
+								}
+							}
+							for (let j = 0; j <stores.list.length; j++) {
+								if (rows[i].target == stores.list[j].uid) { 
+									rows[i].target = stores.list[j].title;
+									break;
+								}
+							}
+						}
+					}
+					obj.list = rows;
+				}
 				obj.status = 1;
 			}
 		}

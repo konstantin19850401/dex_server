@@ -14,7 +14,7 @@ let APP_CONNECTOR = 'mysql';
 
 
 class Core {
-	#coreApi;
+	#coreApi;#dicts = {};
 	constructor() {
 		this.testname = APP_NAME;
 		this._base = 'dex_bases';
@@ -38,6 +38,7 @@ class Core {
 		// await this.initToolbox();
 		// await this.initRoutes();
 		// await this.initDictionaries();
+		
 		// await this.initTikers();
 		// await this.initUserControl();
 		// this.createApp = true;
@@ -49,8 +50,40 @@ class Core {
 	get picture() {return this._pic;}
 	get conname() {return APP_CONNECTOR}
 	get appRoutes() {return that.ROUTES;}
+	DictsByNames(names) {
+		let dicts = [];
+		let arr = [];
+		if (Array.isArray(names) && names.length > 0) names.map(item=> arr.push(item));
+		else if (typeof names === "string") arr.push(names);
+		if (arr.length > 0) {
+			for (let i = 0; i < arr.length; i++) {
+				if (this.#dicts[arr[i]] != "undefined") dicts.push({name: arr[i], list: this.#dicts[arr[i]]});
+			}
+		}
+		return dicts;
+	}
 	set connector(connector) {this._connector = connector;}
 
+	async newInitDicts() {
+		let list = [
+			{name: "users", table: "skyline.user", flds: ["uid","username","lastname","firstname","secondname"]},
+			{name: "docTypes", table: "skyline.dict_doc_types", flds: ["uid","title","status"]},
+			{name: "stores", table: "skyline.dict_stores", flds: ["uid","dex_uid","parent","lastname","firstname","secondname","title","status"]},
+			{name: "docStatuses", table: "skyline.dict_doc_statuses", flds: ["uid","eng","title","status"]},
+			{name: "operators", table: "skyline.dex_dict_operators", flds: ["uid","title","status"]},
+			{name: "typesProducts", table: "skyline.dict_types_products", flds: ["uid","title","status"]},
+			{name: "stocks", table: "skyline.dict_stocks", flds: ["uid","title","status"]},
+			{name: "dexBases", table: "skyline.dex_bases", flds: ["uid","base","operator","title","status"]},
+		];
+		for (let i = 0; i < list.length; i++) {
+			let data = list[i].table.split(".");
+			let rows = await this.toolbox.sqlRequest(data[0], `
+				SELECT ${list[i].flds.join(",")}
+				FROM ${data[1]}
+			`);
+			this.#dicts[list[i].name] = rows;
+		}
+	}
 	async initBases() {
 		for (let i=0; i<COMMONBASE.length; i++) this._connector.newBase(COMMONBASE[i]);
 		for (let operator in DATA) {
@@ -68,9 +101,11 @@ class Core {
 		}
 	}
 	async initToolbox() {
-		
 		this.toolbox = new Toolbox(this._connector);
 		this.#coreApi = new CoreApi(DATA, this.toolbox, this);
+
+
+		await this.newInitDicts();
 	}
 	async initDictionaries() {
 		let dicts = [
@@ -125,16 +160,15 @@ class Core {
 				DATA[operator].bases.map((base)=> {
 					let current = {operator: operator};
 					for (let property in base.configuration) current[property] = base.configuration[property];
-					if (operator == 'yota') { 
-						this.adapters.push(new yotaAdapter(current));
-						// console.log("создание адаптера ", current);
-					}
-					else if (operator == 'megafon') this.adapters.push(new megafonAdapter(current)); 
-					else if (operator == 'mts') this.adapters.push(new mtsAdapter(current)); 
-					else if (operator == 'beeline') this.adapters.push(new beelineAdapter(current)); 
+					if (operator == 'yota') this.adapters.push(new yotaAdapter(current, this));
+					else if (operator == 'megafon') this.adapters.push(new megafonAdapter(current, this)); 
+					else if (operator == 'mts') this.adapters.push(new mtsAdapter(current, this)); 
+					else if (operator == 'beeline') this.adapters.push(new beelineAdapter(current, this)); 
 				})
 			}
-			for (let j=0; j<this.adapters.length; j++) {this.adapters[j].TOOLBOX = this.toolbox;}
+			for (let j=0; j<this.adapters.length; j++) {
+				this.adapters[j].TOOLBOX = this.toolbox;
+			}
 			console.log('\t\t\t\tИнициализация адаптеров успешно завершена');
 		} catch (e) {
 			console.log(`\t\t\t\tИнициализация адаптеров прошла с ошибками ${e}`);
@@ -252,6 +286,11 @@ class Core {
 		if (err.length > 0) obj.err = err;
 		return obj;
 	}	
+	async getNewDicts(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDicts( user, packet.data );
+		return obj;
+	}
 	async getGlobalAppDicts (packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
 		console.log("запрос глобальных справочников");
 		let dicts = {
@@ -1226,7 +1265,9 @@ class Core {
 					"createNewDocType",
 					'getDictDocTypesSingleId',
 					"editDocType",
-					"getStoreJournal"
+					"getStoreJournal",
+
+					"getNewDicts"
 				];
 
 				// let coreApi = new CoreApi(DATA);
@@ -1571,23 +1612,23 @@ let COMMONBASE = [
 
 
 class yotaAdapter extends AdapterYota {
-    constructor(value) {
-        super(value);
+    constructor(value, core) {
+        super(value, core);
     }
 }
 class megafonAdapter extends AdapterMegafon {
-    constructor(value) {
-        super(value);
+    constructor(value, core) {
+        super(value, core);
     }
 }
 class mtsAdapter extends AdapterMTS {
-    constructor(value) {
-        super(value);
+    constructor(value, core) {
+        super(value, core);
     }
 }
 class beelineAdapter extends AdapterBeeline {
-    constructor(value) {
-        super(value);
+    constructor(value, core) {
+        super(value, core);
     }
 }
 

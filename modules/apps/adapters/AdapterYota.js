@@ -8,7 +8,8 @@ let Contract = require('./Contract');
 const moment = require("moment");
 
 class AdapterYota extends Adapter {
-	constructor(obj) {
+    #core;
+	constructor(obj, core) {
 		super(obj);
         that = this;
         // setTimeout(()=> {
@@ -16,6 +17,7 @@ class AdapterYota extends Adapter {
         // }, 3000);
         this.dicts = [];
         this.docid = 'DEXPlugin.Document.Yota.Contract';
+        this.#core = core;
         setTimeout(()=> this.Init(), 2000);
 	}
     get Dicts() {return this.dicts;};
@@ -130,7 +132,7 @@ class AdapterYota extends Adapter {
         return await this.exportContractToYotaV1(row);
     }
     async apiCommands(packet, user) {
-        if (Api[packet.data.action] != undefined) return await Api[packet.data.action](packet, this.toolbox, this.base, user, this, this.getSchemas, this.dicts);
+        if (Api[packet.data.action] != undefined) return await Api[packet.data.action](packet, this.toolbox, this.base, user, this, this.getSchemas, this.dicts, this.#core);
         else return {err: 'Такого метода не существует'};
     }
     async doPeopleSearchHash(birth, lastName, firstName, secondName) {

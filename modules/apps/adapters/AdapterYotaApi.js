@@ -20,7 +20,7 @@ class AdapterYotaApi {
 	constructor() {
 		this.docid = 'DEXPlugin.Document.Yota.Contract';
 	}
-	async list(packet, toolbox, base, user, adapter) {
+	async list(packet, toolbox, base, user, adapter, schemas, dicts, core) {
 		// console.log("list ", base);
 		console.log('запрос ', packet);
 		let obj = {};
@@ -94,12 +94,28 @@ class AdapterYotaApi {
 						}
 					}
 
+					let dicts = core.DictsByNames(["docStatuses","stores"]);
+					let docStatuses = dicts.find(item=> item.name == "docStatuses");
+					let stores = dicts.find(item=> item.name == "stores");
+
 					for (let i=0; i<result.length;i++) {
 						let row = result[i];
 						let fields = {};
 						fields.id = row.id;
 						fields.status = row.status;
+						for (let j = 0; j <docStatuses.list.length; j++) {
+							if (row.status == docStatuses.list[j].uid) { 
+								fields.status = docStatuses.list[j].title;
+								break;
+							}
+						}
 						fields.unitid = row.unitid;
+						for (let j = 0; j <stores.list.length; j++) {
+							if (row.unitid == stores.list[j].dex_uid) { 
+								fields.unitid = stores.list[j].title;
+								break;
+							}
+						}
 						fields.digest = row.digest;
 						fields.docid = row.docid;
 						fields.jdocdate = row.jdocdate;
