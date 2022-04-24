@@ -847,5 +847,81 @@ class CoreApi extends Api {
 		}
 		return obj;
 	}
+
+	async GetMegafonStoresDictionary( user, data ) {
+		console.log(`запрос GetMegafonStoresDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let dicts = this.#core.DictsByNames(["megafonStores","stores","megafonProfiles"]);
+			let mStores = dicts.find(item=> item.name == "megafonStores");
+			let uStores = dicts.find(item=> item.name == "stores");
+			let megaProfiles = dicts.find(item=> item.name == "megafonProfiles");
+			for (let i = 0; i < mStores.list.length; i++) {
+				let unitStore = uStores.list.find(item=> item.dex_uid == mStores.list[i].dex_store);
+				if (typeof unitStore !== "undefined") mStores.list[i].dex_store = unitStore.title;
+				let mProfiles = megaProfiles.list.find(item=> item.code == mStores.list[i].dex_megafon_profile);
+				if (typeof mProfiles !== "undefined") mStores.list[i].dex_megafon_profile = mProfiles.title;
+			}
+			obj.list = mStores.list;				
+			obj.status = 1;
+		}
+		return obj;
+	} 
+	async GetMegafonStoreFromMegafonStoresDictionary( user, data ) {
+		console.log(`запрос GetMegafonStoreFromMegafonStoresDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.id !== 'undefined') {
+				let rows = await this.Toolbox.sqlRequest('skyline', `
+					SELECT id, megafon_code, megafon_sale_point_id, dex_store, dex_megafon_profile, status
+					FROM dex_dict_megafon_stores
+					WHERE id = '${data.id}'
+				`);
+				if ( rows.length > 0 ) {
+					obj.list = rows;
+					obj.status = 1;
+				} else obj.errs.push( 'Запрошенная вами запись не существует!' );
+			}
+		}
+		return obj;
+	}
+	async EditMegafonStoreFromMegafonStoresDictionary( user, data ) {
+		console.log(`запрос EditMegafonStoreFromMegafonStoresDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let editMegafonStoreData = data.fields;
+			if (typeof editMegafonStoreData.id === "undefined" || editMegafonStoreData.id == "") obj.errs.push("Вы не указали id");
+			else {
+				if (!isNaN(parseFloat(editMegafonStoreData.status)) && isFinite(editMegafonStoreData.status)) {
+				let row = await this.Toolbox.sqlRequest('skyline', `
+					SELECT uid 
+					FROM dict_user_statuses 
+					WHERE uid = '${editMegafonStoreData.status}'`);
+				if (row.length == 0) obj.err.push('Указанное вами значение для поля "Статус" не содержится в справочнике!');
+				if (typeof editMegafonStoreData.dex_store === "undefined" || editMegafonStoreData.dex_store == "") obj.errs.push("Вы не указали торговую точку!");
+				if (obj.errs.length == 0) {
+					let row = await this.Toolbox.sqlRequest('skyline', `
+						UPDATE dex_dict_megafon_stores 
+						SET dex_store = '${editMegafonStoreData.dex_store}', status = '${editMegafonStoreData.status}'
+						WHERE id = '${editMegafonStoreData.id}'`);
+					if ( row.affectedRows == 1 ) { 
+						obj.status = 1;
+						obj.list.push({id: editMegafonStoreData.id, title: editMegafonStoreData.dex_store, status: editMegafonStoreData.status});
+						// обновим измененный справочник
+						this.#core.updateNewDicts("megafonStores");
+					}
+					else obj.errs.push('Редактирование записи завершилось с ошибкой!');
+				}
+			} else obj.errs.push('Поле "Статус" обязательно для заполнения!');
+			}
+		}
+		return obj;
+	}
 }
 module.exports = CoreApi;

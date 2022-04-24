@@ -14,7 +14,7 @@ let APP_CONNECTOR = 'mysql';
 
 
 class Core {
-	#coreApi;#dicts = {};
+	#coreApi;#dicts = {};#dictsList;
 	constructor() {
 		this.testname = APP_NAME;
 		this._base = 'dex_bases';
@@ -65,23 +65,40 @@ class Core {
 	set connector(connector) {this._connector = connector;}
 
 	async newInitDicts() {
-		let list = [
+		this.#dictsList = [
 			{name: "users", table: "skyline.user", flds: ["uid","username","lastname","firstname","secondname"]},
 			{name: "docTypes", table: "skyline.dict_doc_types", flds: ["uid","title","status"]},
 			{name: "stores", table: "skyline.dict_stores", flds: ["uid","dex_uid","parent","lastname","firstname","secondname","title","status"]},
 			{name: "docStatuses", table: "skyline.dict_doc_statuses", flds: ["uid","eng","title","status"]},
-			{name: "operators", table: "skyline.dex_dict_operators", flds: ["uid","title","status"]},
+			{name: "operators", table: "skyline.dex_dict_operators", flds: ["uid","title","icc_length","msisdn_length","status"]},
 			{name: "typesProducts", table: "skyline.dict_types_products", flds: ["uid","title","status"]},
 			{name: "stocks", table: "skyline.dict_stocks", flds: ["uid","title","status"]},
 			{name: "dexBases", table: "skyline.dex_bases", flds: ["uid","base","operator","title","status"]},
+			{name: "regions", table: "skyline.dict_regions", flds: ["uid","title","short_title","status"]},
+			{name: "balance", table: "skyline.dex_dict_balance", flds: ["uid","title","status"]},
+			{name: "simTypes", table: "skyline.dict_sim_types", flds: ["uid","title","status"]},
+			{name: "contractors", table: "skyline.contractors", flds: ["uid","title","status"]},
+			{name: "megafonProfiles", table: "skyline.dex_dict_megafon_dispatch_profiles", flds: ["uid","name","title","code","status"]},
+			{name: "megafonStores", table: "skyline.dex_dict_megafon_stores", flds: ["id","megafon_code","megafon_sale_point_id","dex_store","dex_megafon_profile","status"]},
 		];
-		for (let i = 0; i < list.length; i++) {
-			let data = list[i].table.split(".");
+		for (let i = 0; i < this.#dictsList.length; i++) {
+			let data = this.#dictsList[i].table.split(".");
 			let rows = await this.toolbox.sqlRequest(data[0], `
-				SELECT ${list[i].flds.join(",")}
+				SELECT ${this.#dictsList[i].flds.join(",")}
 				FROM ${data[1]}
 			`);
-			this.#dicts[list[i].name] = rows;
+			this.#dicts[this.#dictsList[i].name] = rows;
+		}
+	}
+	async updateNewDicts(name) {
+		let dict = this.#dictsList.find(item=> item.name == name);
+		if (typeof dict !== 'undefined') {
+			let data = dict.table.split(".");
+			let rows = await this.toolbox.sqlRequest(data[0], `
+				SELECT ${dict.flds.join(",")}
+				FROM ${data[1]}
+			`);
+			this.#dicts[name] = rows;
 		}
 	}
 	async initBases() {
@@ -1212,6 +1229,22 @@ class Core {
 		return obj;
 	}
 
+	async getDictMegafonStores( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetMegafonStoresDictionary( user, packet.data );
+		return obj;
+	}
+	async getDictMegafonStoresSingleId( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetMegafonStoreFromMegafonStoresDictionary( user, packet.data );
+		return obj;
+	}
+	async editMegafonStore( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.EditMegafonStoreFromMegafonStoresDictionary( user, packet.data );
+		return obj;
+	}
+
 	// главный вход для api приложения
 	async appApi(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
 		console.log("похоже будет вызов api");
@@ -1267,7 +1300,11 @@ class Core {
 					"editDocType",
 					"getStoreJournal",
 
-					"getNewDicts"
+					"getNewDicts",
+
+					"getDictMegafonStores",
+					"getDictMegafonStoresSingleId",
+					"editMegafonStore"
 				];
 
 				// let coreApi = new CoreApi(DATA);
@@ -1536,6 +1573,36 @@ let DATA = {
 					pseudoName: 'DEXMTSSTS062013',
 					description: 'МТС СК 062013',
 					pseudoRoute: 'mts_sts_062013',
+					docid: 'DEXPlugin.Document.MTS.Jeans',
+					loggingDir: 'logs',
+					api: 'rdealer.ug.mts.ru/RemoteDealerWebServices',
+				}
+			},
+			{
+				name: 'mts_kcr',
+				configuration: {
+					base: 'dex_mts_kcr',
+					host: '192.168.0.33',
+					user: 'dex',
+					password: 'dex',
+					pseudoName: 'DEXMTSKCR',
+					description: 'МТС КЧР',
+					pseudoRoute: 'mts_kcr',
+					docid: 'DEXPlugin.Document.MTS.Jeans',
+					loggingDir: 'logs',
+					api: 'rdealer.ug.mts.ru/RemoteDealerWebServices',
+				}
+			},
+			{
+				name: 'mts_kcr_distr',
+				configuration: {
+					base: 'dex_mts_kcr_distr',
+					host: '192.168.0.33',
+					user: 'dex',
+					password: 'dex',
+					pseudoName: 'DEXMTSKCRDISTR',
+					description: 'МТС КЧР ДИСТРИБУЦИЯ',
+					pseudoRoute: 'mts_kcr_distr',
 					docid: 'DEXPlugin.Document.MTS.Jeans',
 					loggingDir: 'logs',
 					api: 'rdealer.ug.mts.ru/RemoteDealerWebServices',
