@@ -26,7 +26,7 @@ class Toolbox {
         return new Promise((resolve, reject)=> {
             that.connector.connect(base).getConnection((err, connection)=> {
                 if (err) {
-                    console.log(`Ошибка соединения с базой данных. База=> ${cbase}. Запрос ${sql}. Описание ошибки=> ${err}`);
+                    console.log(`Ошибка соединения с базой данных. База=> ${base}. Запрос ${sql}. Описание ошибки=> ${err}`);
                     resolve(null);
                 } else {
                     //console.log(`успешно соединились с базой ${cbase}`);
@@ -449,6 +449,19 @@ class Toolbox {
         //}
         if (newStr != name) name = newStr;
         return name;
+    }
+    // преобразование Фамилия Имя Отчество в ФИО
+    fullNameToFio(lastName, firstName, secondName) {
+        let fio = this.normName(lastName);
+        if (typeof firstName !== 'undefined' && firstName != '') {
+            let fnameCharacter = firstName.substring(0, 1).toUpperCase();
+            fio += ` ${fnameCharacter}.`;
+            if (typeof secondName !== 'undefined' && secondName != '') {
+                let snameCharacter = secondName.substring(0, 1).toUpperCase();
+                fio += `${snameCharacter}.`;
+            }
+        }
+        return fio;
     }
     // получение уникального от времени хэш-значения
     generateUniqueHash() {

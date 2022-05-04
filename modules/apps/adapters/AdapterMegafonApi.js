@@ -15,6 +15,7 @@ class AdapterMegafonApi {
         let err = [];
         obj.list = [];
         obj.operator = 'MEGAFON';
+        obj.status = -1;
         let start, end, lowerCaseSearch;
         if (packet.data.subaction === 'period') {
             start = packet.data.start;
@@ -155,6 +156,7 @@ class AdapterMegafonApi {
         }
         console.log('отдали ответ');
         if (err.length > 0) obj.err = err;
+        else obj.status = 1;
         return obj;
     }
     async dicts(packet, toolbox, base, user) {
@@ -255,9 +257,15 @@ class AdapterMegafonApi {
 		let obj = {};
 		let err = [];
 		// obj.data = [];
-		let ids = packet.data.list.join(',');
+		// let ids = packet.data.list.join(',');
 		obj.base = packet.data.base;
-        let rows = await toolbox.sqlRequest(base, `SELECT data FROM journal WHERE id IN (${ids})`);
+        // let rows = await toolbox.sqlRequest(base, `SELECT data FROM journal WHERE id IN (${ids})`);
+        let ids = packet.data.list;
+        let rows = [];
+        for (let id of ids) {
+            let rw = await toolbox.sqlRequest(base, `SELECT data FROM journal WHERE id = ${id}`);
+            if (rw.length > 0) rows.push(rw[0]);
+        }
         try {
             if (rows.length > 0) {
                 let schema = JSON.parse(fs.readFileSync(`${__dirname}/printing_forms/documents/megafon/schema.json`, 'utf8'));

@@ -808,21 +808,22 @@ class CoreApi extends Api {
 				if (typeof data.type !== "undefined") where.push(`type = '${data.type}'`);
 				where.push(`date BETWEEN '${start.format("YYYY-MM-DD")} 00:00:00' AND '${end.format("YYYY-MM-DD")} 23:59:59'`);
 				let rows = await this.Toolbox.sqlRequest(`skyline`, `
-					SELECT id, type, date, creater, target, status
+					SELECT id, type, date, sum, creater, stock, fromStock, status
 					FROM journal
 					WHERE ${where.join(" AND ")}
 				`);
 				if (rows.length > 0) { 
 					// так как будут uid пользователей, было бы фигово их передавать в открытом виде. Превратим в usernames
-					let dicts = this.#core.DictsByNames(["users","docTypes","stores"]);
+					let dicts = this.#core.DictsByNames(["users","docTypes","stores", "stocks"]);
 					if (dicts.length > 0) {
 						let users = dicts.find(item=> item.name == "users");
 						let docTypes = dicts.find(item=> item.name == "docTypes");
 						let stores = dicts.find(item=> item.name == "stores");
+						let stocks = dicts.find(item=> item.name == "stocks");
 						for (let i = 0; i < rows.length; i++) {
 							for (let j = 0; j <users.list.length; j++) {
 								if (rows[i].creater == users.list[j].uid) { 
-									rows[i].creater = users.list[j].username;
+									rows[i].creater = this.Toolbox.fullNameToFio(users.list[j].lastname, users.list[j].firstname, users.list[j].secondname);
 									break;
 								}
 							}
@@ -838,11 +839,137 @@ class CoreApi extends Api {
 									break;
 								}
 							}
+							for (let j = 0; j < stocks.list.length; j++) {
+								if (rows[i].stock == stocks.list[j].uid) { 
+									rows[i].stock = stocks.list[j].title;
+									break;
+								}
+							}
+							if (rows[i].fromStock != -1) {
+								for (let j = 0; j < stocks.list.length; j++) {
+									if (rows[i].fromStock == stocks.list[j].uid) { 
+										rows[i].fromStock = stocks.list[j].title;
+										break;
+									}
+								}
+							} else rows[i].fromStock = '';
 						}
 					}
 					obj.list = rows;
 				}
 				obj.status = 1;
+			}
+		}
+		return obj;
+	}
+	async СreateDocumentInUniversalJournal( user, data ) {
+		console.log(`запрос СreateDocumentInUniversalJournal для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let dicts = this.#core.DictsByNames(['contractors','balance','simTypes','operators','dexBases','regions']);
+			let params = data.params;
+			let list = data.list;
+
+			let contractors = dicts.find(item=> item.name == "contractors");
+			console.log("contractors=> ", contractors);
+			let contractor = contractors.list.find(item=> item.uid == data.params.contractors);
+			if ( typeof contractor === 'undefined') obj.errs.push('Указанный вами контраагент не существует');
+			let balance;
+			let chechProducts = [0,1];
+			if (list.length == 0) obj.errs.push('Вы пытаетесь создать пустой документ'); 
+			else {
+				if (params.product == 0) {
+					let balances = dicts.find(item=> item.name == "balance");
+					balance = balances.list.find(item=> item.uid == data.params.balance);
+					if ( typeof balance === 'undefined') obj.errs.push('Указанный вами баланс не существует в справочнике балансов');
+					
+					let simTypes = dicts.find(item=> item.name == "simTypes");
+					let simType = simTypes.list.find(item=> item.uid == data.params.simTypes);
+					if ( typeof simType === 'undefined') obj.errs.push('Указанный вами тим Сим-карты не существует');
+					
+					let operators = dicts.find(item=> item.name == "operators");
+					let operator = operators.list.find(item=> item.uid == data.params.operator);
+					if ( typeof operator === 'undefined') obj.errs.push('Указанный вами Оператор не существует');
+					
+					let bases = dicts.find(item=> item.name == "dexBases");
+					let base = bases.list.find(item=> item.uid == data.params.base);
+					if ( typeof base === 'undefined') obj.errs.push('Указанная вами База не существует');
+
+					let regions = dicts.find(item=> item.name == "regions");
+					let region = regions.list.find(item=> item.uid == data.params.region && item.status == 1);
+					if ( typeof region === 'undefined') obj.errs.push('Указанный вами Регион не существует');
+				}
+				// надо теперь проверить есть, есть ли такой товар в базе для определенных видов продуктов
+				if (chechProducts.indexOf(params.product) != -1) {
+					let chkErrs = {double:[]};
+					for (let i = 0; i < list.length; i++) {
+						let hash;
+						if (params.product == 0) hash = this.Toolbox.criptoHashMD5(`${params.product}${list[i].icc}${list[i].msisdn}`);
+						else if (params.product == 0) hash = this.Toolbox.criptoHashMD5(`${params.product}${list[i].imai}`);
+						let row = await this.Toolbox.sqlRequest('skyline', `
+							SELECT * FROM records
+							WHERE hash = '${hash}'
+						`);
+						if (row.length > 0) chkErrs.double.push(i);
+					}
+					if (chkErrs.double.length > 0) { 
+						obj.errs.push('В списке присутствуют дублирующиеся записи');
+						obj.double = chkErrs.double;
+					}
+				}
+			}
+			if (obj.errs.length == 0) {
+				let newRecord = {
+					stock: data.params.stock,
+					contractor: data.params.contractors,
+					product: data.params.product,
+					operator: data.params.operator,
+					base: data.params.base,
+					region: data.params.region,
+					balance: data.params.balance,
+				}
+
+				let arr = [];
+				let cbalance = 0;
+				if (balance.uid != 0) cbalance = parseInt(balance.title);
+				let sum = cbalance * list.length;
+				for (let key in newRecord) arr.push(`${key}=${newRecord[key]}`);
+				let dataJournal = arr.join(',');
+
+				let result = await this.Toolbox.sqlRequest('skyline', `
+					INSERT INTO journal 
+					SET type = '3', creater = '${user.UserId}', stock = '0', data = '${dataJournal}', sum='${sum}', status = '102'
+				`);
+				if (typeof result !== 'undefined' && typeof result.insertId !== 'undefined') {
+					let hash = '';
+
+					if (chechProducts.indexOf(params.product) != -1) {
+						for (let i = 0; i < list.length; i++) {
+							let arrRecord = [];
+							for (let key in list[i]) arrRecord.push(`${key}=${list[i][key]}`);
+							let dataRecord = arrRecord.join(',');
+							if (params.product == 0) hash = this.Toolbox.criptoHashMD5(`${params.product}${list[i].icc}${list[i].msisdn}`);
+							else if (params.product == 0) hash = this.Toolbox.criptoHashMD5(`${params.product}${list[i].imai}`);
+							await this.Toolbox.sqlRequest('skyline', `
+								INSERT INTO records
+								SET parent = '${result.insertId}', data = '${dataRecord}', hash = '${hash}'
+							`);
+						}
+					} else {
+						let arrRecord = [];
+						for (let key in list[i]) arrRecord.push(`${key}=${list[i][key]}`);
+						let dataRecord = arrRecord.join(',');
+						for (let i = 0; i < list.length; i++) {
+							await this.Toolbox.sqlRequest('skyline', `
+								INSERT INTO records
+								SET parent = '${result.insertId}', data = '${dataRecord}', hash = '${hash}'
+							`);
+						}
+					}
+					obj.status = 1;		
+				}
 			}
 		}
 		return obj;

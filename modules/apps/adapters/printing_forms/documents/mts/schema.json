@@ -13,6 +13,22 @@
 			"width": 257
 		}
 	},
+	"DocCity": {
+		"left": 45,
+		"top": 324,
+		"fontSize": 10,
+		"css": {
+			"width": 257
+		}
+	},
+	"DealerName": {
+		"left": 45,
+		"top": 324,
+		"fontSize": 10,
+		"css": {
+			"width": 257
+		}
+	},
 	"LastName": {
 		"left": 45,
 		"top": 324,
@@ -42,6 +58,7 @@
 					"from": 0,
 					"to": 2
 				},
+				"fontSize": 10,
 				"left": 10,
 				"top": 407,
 				"width": 40				
@@ -52,6 +69,7 @@
 					"from": 3,
 					"to": 5
 				},
+				"fontSize": 10,
 				"left": 44,
 				"top": 407,
 				"width": 40
@@ -62,6 +80,7 @@
 					"from": 6,
 					"to": 11
 				},
+				"fontSize": 10,
 				"left": 79,
 				"top": 407,
 				"width": 80
@@ -107,6 +126,7 @@
 	"FizDocSeries": {
 		"left": 48,
 		"top": 542,
+		"fontSize": 10,
 		"css": {
 			"width": 300,
 			"characterSpacing": 13
@@ -115,6 +135,7 @@
 	"FizDocNumber": {
 		"left": 10,
 		"top": 576,
+		"fontSize": 10,
 		"css": {
 			"width": 300,
 			"characterSpacing": 8.5
@@ -123,6 +144,7 @@
 	"FizDocOrg": {
 		"left": 210,
 		"top": 17,
+		"fontSize": 7,
 		"css": {
 			"width": 180,
 			"size": 7.5
@@ -136,6 +158,7 @@
 					"from": 0,
 					"to": 3
 				},
+				"fontSize": 10,
 				"left": 296,
 				"top": 111,
 				"width": 60				
@@ -146,6 +169,7 @@
 					"from": 4,
 					"to": 7
 				},
+				"fontSize": 10,
 				"left": 351,
 				"top": 111,
 				"width": 60
@@ -163,6 +187,7 @@
 					"from": 0,
 					"to": 2
 				},
+				"fontSize": 10,
 				"left": 265,
 				"top": 58,
 				"width": 40				
@@ -173,6 +198,7 @@
 					"from": 3,
 					"to": 5
 				},
+				"fontSize": 10,
 				"left": 300,
 				"top": 58,
 				"width": 40
@@ -183,6 +209,7 @@
 					"from": 6,
 					"to": 11
 				},
+				"fontSize": 10,
 				"left": 335,
 				"top": 58,
 				"width": 80
@@ -195,6 +222,7 @@
 	"AddrZip": {
 		"left": 210,
 		"top": 111,
+		"fontSize": 10,
 		"css": {
 			"width": 300,
 			"characterSpacing": 8.5
@@ -250,6 +278,7 @@
 					"from": 0,
 					"to": 2
 				},
+				"fontSize": 10,
 				"left": 660,
 				"top": 394,
 				"width": 40				
@@ -260,6 +289,7 @@
 					"from": 3,
 					"to": 5
 				},
+				"fontSize": 10,
 				"left": 695,
 				"top": 394,
 				"width": 40
@@ -270,6 +300,7 @@
 					"from": 6,
 					"to": 11
 				},
+				"fontSize": 10,
 				"left": 730,
 				"top": 394,
 				"width": 80
@@ -282,6 +313,7 @@
 	"MSISDN": {
 		"left": 603,
 		"top": 50,
+		"fontSize": 10,
 		"css": {
 			"width": 300,
 			"size": 12
@@ -358,19 +390,8 @@
 					"left": 455,
 					"top": 473,
 					"width": 180,
-					"characterSpacing": 9.5
-				}
-			},
-			{			
-				"text": {
-					"action": "dicts",
-					"dict": "registers",
-					"col_name": "rname",
-					"search": "dealer_code",
-					"left": 410,
-					"top": 515,
-					"width": 180,
-					"characterSpacing": 2
+					"characterSpacing": 9.5,
+					"fontSize": 10
 				}
 			}
 		],
@@ -384,18 +405,18 @@
 		"variants": {
 			"action": "join",
 			"fields": ["ICC", "ICCCTL", "MSISDN"],
-			"left": 407,
-			"top": 34
+			"left": 403,
+			"top": 511
 		},
 		"css": {
-			"width": 180,
-			"height": 25,
+			"width": 166,
+			"height": 21,
 			"size": 25
 		}
 	},
 	"FIO": {
 		"variants": {
-			"action": "fio",
+			"action": "join",
 			"mainField": "LastName",
 			"fields": ["FirstName", "SecondName"],
 			"left": 643,
@@ -415,7 +436,8 @@
 					"col_name": "rname",
 					"search": "dealer_code",
 					"left": 410,
-					"top": 500	
+					"top": 500,
+					"fontSize": 10	
 				}
 			}
 		],

@@ -57,7 +57,7 @@ class Core {
 			console.log(`${tabs(1)}ЯДРО. НАЧАЛО ПРОЦЕССА ИНИЦИАЛИЗАЦИИ АДАПТЕРОВ СОЕДИНЕНИЙ С БАЗОЙ ДАННЫХ`);
 			let dirs = fs.readdirSync(DIR_CONNECTORS, { withFileTypes: true });
 			dirs.map((dir)=> {
-				console.log("dir=> ", dir.name);
+				// console.log("dir=> ", dir.name);
 				let connector = new (require(`${DIR_CONNECTORS}/${dir.name}/index`))();
 				this.connectors.push(connector);
 				if (typeof listDefCons[connector.name] !== 'undefined') {

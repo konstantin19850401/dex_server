@@ -1,12 +1,18 @@
 const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const pdf2base64 = require('pdf-to-base64');
+
+const pdfLib = require("pdf-lib");
+const fontkit = require("fontkit");
 // const codes = require('rescode');
 // const bwipjs = require('bwip-js');
+// const fetchUtils = require("fetch-utils");
+// const fetch = require("node-fetch");
 
 class AdapterMTSApi {
 	constructor() {
 		this.docid = 'DEXPlugin.Document.MTS.Jeans';
+        // this.test();
 	}
     async list(packet, toolbox, base, user, adapter, schemas, dicts, core) {
         // console.log("list ", base);
@@ -15,6 +21,7 @@ class AdapterMTSApi {
         let err = [];
         obj.list = [];
         obj.operator = 'MTS';
+        obj.status = -1;
         let start, end, lowerCaseSearch;
         if (packet.data.subaction === 'period') {
             start = packet.data.start;
@@ -161,6 +168,7 @@ class AdapterMTSApi {
         }
         console.log('отдали ответ');
         if (err.length > 0) obj.err = err;
+        else obj.status = 1;
         return obj;
     }
     async hooks(packet, toolbox, base, user, adapter) {
@@ -191,6 +199,8 @@ class AdapterMTSApi {
                 obj.subaction = packet.data.subaction;
                 if (packet.data.list.length > 0) {
                     let prt = await this.printForm(packet, toolbox, base, user);
+                    if (prt.status == -1) err = err.concat(prt.err);
+                    obj.status = prt.status;
                     obj.link = prt.link;
                     obj.base = packet.data.base;
                     // console.log("prt=> ", prt);
@@ -212,205 +222,240 @@ class AdapterMTSApi {
 		let obj = {};
 		let err = [];
 		obj.data = [];
-		let ids = packet.data.list.join(',');
-		obj.base = packet.data.base;
-        let rows = await toolbox.sqlRequest(base, `SELECT data FROM journal WHERE id IN (${ids})`);
-        if (rows.length > 0) {
-            let schema = JSON.parse(fs.readFileSync(`${__dirname}/printing_forms/documents/mts/schema.json`, 'utf8'));
-
-            let doc = new PDFDocument({
-	            autoFirstPage: false,
-	            bufferPages: true
-	        });
-
-            let hash = toolbox.getHash();
-            obj.link = `mts_${hash}.pdf`;
-
-            doc.pipe(fs.createWriteStream(`${__dirname}/printing_forms/temp/mts_${hash}.pdf`));
-
-            for (let row of rows) {
-            	// console.log(row);
-            	let dataContract = await toolbox.xmlToJs(row.data);
-            	
-            	doc.addPage({
-				    // size: 'LEGAL',
-				    layout: 'landscape'
-				});
-            	doc.page.margins.bottom = 0;
-
-            	doc.image(`${__dirname}/printing_forms/documents/mts/documentFrom.jpg`, -25, -25, {width: 840, height: 640, align: 'center'})
-            	.font(`${__dirname}/fonts/arial.ttf`)
-              	.fontSize(10)
-              	.moveDown(0.5);
-            	
-            	for (let key in dataContract.Document) {
-            		// doc.switchToPage(range.start);
-            		// console.log("range=>", range);
-            		if (typeof schema[key] !== 'undefined') {
-            			// doc.font(`${__dirname}/fonts/arial.ttf`)
-            			if (typeof schema[key].variants === 'undefined') {
-            				let characterSpacing = typeof schema[key].css.characterSpacing !== 'undefined' ? schema[key].css.characterSpacing : 0;
-            				let size = typeof schema[key].css.size !== 'undefined' ? doc.fontSize(schema[key].css.size) : doc.fontSize(10);
-            				// console.log("characterSpacing=>", characterSpacing);
-            				doc.font(`${__dirname}/fonts/arial.ttf`)
-            				.text(dataContract.Document[key][0], schema[key].left, schema[key].top, {
-                				width: schema[key].css.width, 
-                				characterSpacing: characterSpacing,
-                				size: size
-                			})
-                			// .moveDown();
-            			} else {
-            				for (let variant in schema[key].variants) {
-            					let text = '';
-            					let size = typeof schema[key].css.size !== 'undefined' ? doc.fontSize(schema[key].css.size) : doc.fontSize(10);
-            					if (schema[key].variants[variant].text.action === 'substring') {
-            						let from = schema[key].variants[variant].text.from;
-            						let to = schema[key].variants[variant].text.to;
-            						text = dataContract.Document[key][0].substring(from, to);
-            						doc.font(`${__dirname}/fonts/arial.ttf`)
-            						.text(text, schema[key].variants[variant].left, schema[key].variants[variant].top, {
-		                				width: schema[key].variants[variant].width, 
-		                				characterSpacing: schema[key].css.characterSpacing,
-		                				size: size
-		                			})
-            					} else if (schema[key].variants[variant].text.action === 'list') {
-            						let text = schema[key].variants[variant].text.list[dataContract.Document[key][0]].title;
-            						let left =  schema[key].variants[variant].text.list[dataContract.Document[key][0]].left;
-            						let top =  schema[key].variants[variant].text.list[dataContract.Document[key][0]].top;
-            						let width = schema[key].variants[variant].text.list[dataContract.Document[key][0]].width;
-            						doc.font(`${__dirname}/fonts/arial.ttf`)
-            						.text(text, left, top, {
-		                				width: width, 
-		                				characterSpacing: schema[key].css.characterSpacing,
-		                				size: size
-		                			})
-            					} else if (schema[key].variants[variant].text.action === 'join') {
-            						let text = '';
-            						let characterSpacing = typeof schema[key].css.characterSpacing !== 'undefined' ? schema[key].css.characterSpacing : 0;
-            						let left =  schema[key].variants[variant].text.left;
-            						let top =  schema[key].variants[variant].text.top;
-            						let width = schema[key].variants[variant].text.width;
-            						let arr = [];
-            						for (let f of schema[key].variants[variant].text.fields) {
-            							if (dataContract.Document[f][0] !== '') {
-            								let t = '';
-            								if (typeof schema[key].variants[variant].text.fieldsAdd[f] !== 'undefined') {
-            									t = `${schema[key].variants[variant].text.fieldsAdd[f]}${schema[key].variants[variant].text.symbolSpace}${dataContract.Document[f][0]}`;
-            								} else t = dataContract.Document[f][0];
-            								arr.push(t);
-            							}
-            						}
-            						text = arr.join(schema[key].variants[variant].text.separator);
-            						doc.font(`${__dirname}/fonts/arial.ttf`)
-            						.text(text, left, top, {
-		                				width: width, 
-		                				characterSpacing: characterSpacing,
-		                				size: size
-		                			})
-            					} else if (schema[key].variants[variant].text.action === 'dicts') {
-            						// console.log("dataContract.Document[key][0]=> ", dataContract.Document[key][0]);
-            						let characterSpacing = typeof schema[key].css.characterSpacing !== 'undefined' ? schema[key].css.characterSpacing : 0;
-            						let dict = schema[key].variants[variant].text.dict;
-            						let text = '';
-            						let left = schema[key].variants[variant].text.left;
-            						let top = schema[key].variants[variant].text.top;
-            						let width = schema[key].variants[variant].text.width;
-            						let value = '';
-            						if (schema[key].variants[variant].text.tag === '_') {
-            							let value = dataContract.Document[key][0]._;
-                						let colName = schema[key].variants[variant].text.col_name;
-                						let row = await toolbox.sqlRequest(base, `SELECT title FROM ${dict} WHERE ${colName} = '${value}'`);
-                						if (row.length > 0) text = row[0].title;
-            						} else if (schema[key].variants[variant].text.tag === '$') {
-            							let value = dataContract.Document[key][0]._;
-            							text = value;
-            						} else {
-            							let characterSpacing;
-            							if (typeof schema[key].variants[variant].text.characterSpacing !== 'undefined') {
-            								characterSpacing = schema[key].variants[variant].text.characterSpacing;
-            							} else {
-            								characterSpacing = typeof schema[key].css.characterSpacing !== 'undefined' ? schema[key].css.characterSpacing : 0;
-            							}
-            							let text = '';
-            							let dict = schema[key].variants[variant].text.dict;
-            							let colName = schema[key].variants[variant].text.col_name;
-            							let left = schema[key].variants[variant].text.left;
-            							let top = schema[key].variants[variant].text.top;
-            							let width = schema[key].variants[variant].text.width;
-            							if (typeof schema[key].variants[variant].text.join !== 'undefined') {
-            								let search = schema[key].variants[variant].text.search;
-            								let row = await toolbox.sqlRequest(base, `SELECT rvalue FROM ${dict} WHERE ${colName} = '${search}'`);
-            								if (row.length > 0) text = `${row[0].rvalue}${dataContract.Document[key][0]}`;
-            								doc.font(`${__dirname}/fonts/arial.ttf`)
-	                						.text(text, left, top, {
-				                				width: width, 
-				                				characterSpacing: characterSpacing,
-				                				size: size
-				                			})
-            							} else {
-            								let search = schema[key].variants[variant].text.search;
-            								let row = await toolbox.sqlRequest(base, `SELECT rvalue FROM ${dict} WHERE ${colName} = '${search}'`);
-            								if (row.length > 0) text = `${row[0].rvalue}`;
-            								doc.font(`${__dirname}/fonts/arial.ttf`)
-	                						.text(text, left, top, {
-				                				width: width, 
-				                				characterSpacing: characterSpacing,
-				                				size: size
-				                			})
-            							}
-            							
-            						}
-            						doc.font(`${__dirname}/fonts/arial.ttf`)
-            						.text(text, left, top, {
-		                				width: width, 
-		                				characterSpacing: characterSpacing,
-		                				size: size
-		                			})
-            					} 
-            				}
-            			}
-            		}
-            	}
-            	// теперь добавить штрих код
-    			if (typeof schema.BARCODE !== 'undefined') {
-    				let left = schema.BARCODE.variants.left;
-    				let top = schema.BARCODE.variants.top;
-    				let width = schema.BARCODE.css.width;
-    				let height = schema.BARCODE.css.height;
-
-	    			let arr = [];
-    				for (let field of schema.BARCODE.variants.fields) {
-    					arr.push(dataContract.Document[field][0]);
-    				}
-    				let text = arr.join('');
-
-	    			let png = await toolbox.generateBarCode('code128', text);
-	    			doc.image(png, left, top, {width: width, height: height})
-    			}
-
-    			// фио
-    			if (typeof schema.FIO !== 'undefined') {
-    				let characterSpacing = typeof schema.FIO.css.characterSpacing !== 'undefined' ? schema.FIO.css.characterSpacing : 0;
-    				let size = typeof schema.FIO.css.size !== 'undefined' ? doc.fontSize(schema.FIO.css.size) : doc.fontSize(10);
-    				let left = schema.FIO.variants.left;
-    				let top = schema.FIO.variants.top;
-    				let width = schema.FIO.css.width;
-    				let text = dataContract.Document[schema.FIO.variants.mainField][0];
-    				for (let field of schema.FIO.variants.fields) {
-    					text += ` ${dataContract.Document[field][0].substring(0, 1)}.`;
-    				}
-    				doc.font(`${__dirname}/fonts/arial.ttf`)
-					.text(text, left, top, {
-        				width: width, 
-        				characterSpacing: characterSpacing,
-        				size: size
-        			})
-    			}
+        obj.base = packet.data.base;
+        obj.status = -1;
+        let cntDocs = 1000;
+        if (packet.data.list.length > cntDocs) {
+            err.push(`Количество документов на печать не должно превышать ${cntDocs}`);
+        } else {
+            let ids = packet.data.list;
+            let rows = [];
+            for (let id of ids) {
+                let rw = await toolbox.sqlRequest(base, `SELECT data FROM journal WHERE id = ${id}`);
+                if (rw.length > 0) rows.push(rw[0]);
             }
-			doc.end();
+            // let rows = await toolbox.sqlRequest(base, `SELECT data FROM journal WHERE id IN (${ids})`);
+            if (rows.length > 0) {
+                let schema = JSON.parse(fs.readFileSync(`${__dirname}/printing_forms/documents/mts/schema.json`, 'utf8'));
+                let hash = toolbox.getHash();
+                obj.link = `mts_${hash}.pdf`;
+                const pdfDoc = await pdfLib.PDFDocument.create();
+                let flds = {
+                    CodeWord: "01",
+                    Plan: '02',
+                    LastName: '03',
+                    FirstName: '04',
+                    SecondName: '05',
+                    FizDocCitizen: '13',
+                    FizBirthPlace: '11',
+                    FizDocSeries: '14',
+                    FizDocNumber: '15',
+                    FizDocOrg: '16',
+                    AddrZip: '21',
+                    AddrState: '23',
+                    AddrRegion: '24',
+                    AddrCity: '25',
+                    MSISDN: 'phone',
+                    FizDocOrgCode: ['20','22'],
+                    FizDocDate: ['17','18','19'],
+                    Birth: ['06','07','08'],
+                    DocDate: ['60','61','62'],
+                    Sex: ['09','10'],
+                    AddrStreet: '26',
+                    ICC: 'iccid',
+                    FIO: 'fio',
+                    FizDocCitizen: '13',
+                    FizDocType: '12',
+                    AssignedDPCode: '49',
+                    DEALER_NAME: '50',
+                    BARCODE: 'barcode',
+                    DocCity: '63',
+                    DealerName: '51'
+                }
+                const fontBytes = fs.readFileSync(`${__dirname}/fonts/arial.ttf`);
+                
+                for (let row of rows) {
+                    let ifAdd = true;
+                    let buffer = fs.readFileSync(`${__dirname}/printing_forms/documents/mts/mts.pdf`);
+                    let page = await pdfLib.PDFDocument.load(buffer);
+                    page.registerFontkit(fontkit);
+                    const customFont = await page.embedFont(fontBytes);
+                    const form = page.getForm();
+
+                    let errItemIcc = form.getTextField('erriccid');
+                    errItemIcc.setText('');
+                    let errItemMsisdn = form.getTextField('errphone');
+                    errItemMsisdn.setText('');
+
+                    let dataContract = await toolbox.xmlToJs(row.data);
+                    for (let key in dataContract.Document) {
+                        if (typeof schema[key] !== 'undefined' && typeof flds[key] !== 'undefined') {
+                            if (typeof schema[key].variants === 'undefined') {
+                                let item = form.getTextField(flds[key]);
+                                item.setText(dataContract.Document[key][0]);
+                                // console.log("dataContract.Document[key][0]=> ", dataContract.Document[key][0]);
+                                if (schema[key].fontSize) item.setFontSize(schema[key].fontSize);
+                                item.updateAppearances(customFont);
+                            } else {
+                                for (let i = 0; i < schema[key].variants.length; i++) {
+                                    let text = '';
+                                    if (schema[key].variants[i].text.action === 'substring') {
+                                        let from = schema[key].variants[i].text.from;
+                                        let to = schema[key].variants[i].text.to;
+                                        text = dataContract.Document[key][0].substring(from, to);
+                                        let item = form.getTextField(flds[key][i]);
+                                        item.setText(text);
+                                        if (schema[key].variants[i].fontSize) item.setFontSize(schema[key].variants[i].fontSize);
+                                        item.updateAppearances(customFont);
+                                    } else if (schema[key].variants[i].text.action === 'list') {
+                                        let item = form.getCheckBox(flds[key][dataContract.Document[key][0]]);
+                                        item.check();
+                                    } else if (schema[key].variants[i].text.action === 'join') {
+                                        let arr = [];
+                                        for (let f of schema[key].variants[i].text.fields) {
+                                            if (typeof dataContract.Document[f] !== 'undefined' && typeof dataContract.Document[f][0] !== 'undefined' && dataContract.Document[f][0] !== '') {
+                                                let t = '';
+                                                if (typeof schema[key].variants[i].text.fieldsAdd[f] !== 'undefined') {
+                                                    t = `${schema[key].variants[i].text.fieldsAdd[f]}${schema[key].variants[i].text.symbolSpace}${dataContract.Document[f][0]}`;
+                                                } else t = dataContract.Document[f][0];
+                                                arr.push(t);
+                                            }
+                                        }
+                                        text = arr.join(schema[key].variants[i].text.separator);
+                                        let item = form.getTextField(flds[key]);
+                                        item.setText(text);
+                                        item.updateAppearances(customFont);
+                                    } else if (schema[key].variants[i].text.action === 'dicts') {
+                                        let text = '';
+                                        let dict = schema[key].variants[i].text.dict;
+                                        let value = '';
+                                        if (schema[key].variants[i].text.tag === '_') {
+                                            let value = dataContract.Document[key][0]._;
+                                            let colName = schema[key].variants[i].text.col_name;
+                                            let row = await toolbox.sqlRequest(base, `SELECT title FROM ${dict} WHERE ${colName} = '${value}'`);
+                                            if (row.length > 0) text = row[0].title;
+                                        } else if (schema[key].variants[i].text.tag === '$') {
+                                            let value = dataContract.Document[key][0]._;
+                                            text = value;
+                                        } else {
+                                            let dict = schema[key].variants[i].text.dict;
+                                            let colName = schema[key].variants[i].text.col_name;
+                                            if (typeof schema[key].variants[i].text.join !== 'undefined') {
+                                                let search = schema[key].variants[i].text.search;
+                                                let row = await toolbox.sqlRequest(base, `SELECT rvalue FROM ${dict} WHERE ${colName} = '${search}'`);
+                                                if (row.length > 0) text = `${row[0].rvalue}${dataContract.Document[key][0]}`;
+                                            } else {
+                                                let search = schema[key].variants[i].text.search;
+                                                let row = await toolbox.sqlRequest(base, `SELECT rvalue FROM ${dict} WHERE ${colName} = '${search}'`);
+                                                if (row.length > 0) text = `${row[0].rvalue}`;
+                                            }
+                                        }
+                                        let item = form.getTextField(flds[key]);
+                                        item.setText(text);
+                                        if (schema[key].variants[i].text.fontSize) item.setFontSize(schema[key].variants[i].text.fontSize);
+                                        item.updateAppearances(customFont);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (typeof schema.FIO !== 'undefined') {
+                        try {
+                            if (typeof dataContract.Document[schema.FIO.variants.mainField] !== 'undefined' && typeof dataContract.Document[schema.FIO.variants.mainField][0] !== 'undefined') {
+                                let text = dataContract.Document[schema.FIO.variants.mainField][0];
+                                for (let field of schema.FIO.variants.fields) {
+                                    text += ` ${dataContract.Document[field][0].substring(0, 1)}.`;
+                                }
+                                let item = form.getTextField(flds.FIO);
+                                item.setText(text);
+                                item.updateAppearances(customFont);
+                            }
+                        } catch(e) {
+                            console.log("e=> ", e);
+                            console.log("ошибка возникла на ", dataContract.Document);
+                        }
+                        
+                    }
+                    if (typeof schema.DEALER_NAME !== 'undefined') {
+                        for (let i = 0; i < schema.DEALER_NAME.variants.length; i++) {
+                            let text = '';
+                            let dict = schema["DEALER_NAME"].variants[i].text.dict;
+                            let colName = schema["DEALER_NAME"].variants[i].text.col_name;
+                            let search = schema["DEALER_NAME"].variants[i].text.search;
+                            let row = await toolbox.sqlRequest(base, `SELECT rvalue FROM ${dict} WHERE ${colName} = '${search}'`);
+                            if (row.length > 0) text = row[0].rvalue;
+                            let item = form.getTextField(flds.DEALER_NAME);
+                            item.setText(text);
+                            if (schema["DEALER_NAME"].variants[i].text.fontSize) item.setFontSize(schema["DEALER_NAME"].variants[i].text.fontSize);
+                            item.updateAppearances(customFont);
+                        }       
+                    }
+                   
+                    form.flatten();
+
+                    const [coverPage] = await pdfDoc.copyPages(page, [0]);
+                    pdfDoc.addPage(coverPage);
+
+
+                     // теперь добавить штрих код
+                    if (typeof schema.BARCODE !== 'undefined') {
+                        try {
+                            let arr = [];
+                            for (let field of schema.BARCODE.variants.fields) {
+                                if (typeof dataContract.Document[field] !== 'undefined' && typeof dataContract.Document[field][0] !== 'undefined') arr.push(dataContract.Document[field][0]);
+                            }
+                            if (arr.length == 3) {
+                                let text = arr.join('');
+                                const pages = pdfDoc.getPages();
+                                const cpage = pages[pages.length - 1];
+                                let png = await toolbox.generateBarCode('code128', text);
+                                
+                                const pngImage = await pdfDoc.embedPng(png);
+                                const pngDims = pngImage.scale(0.5);
+
+                                console.log(text);
+
+                                cpage.drawImage(pngImage, {
+                                    x: schema.BARCODE.variants.left,
+                                    y: schema.BARCODE.variants.top,
+                                    width: pngDims.width/1.75,
+                                    height: pngDims.height/1.8,
+                                })
+                            }
+                        } catch (e) {
+                            ifAdd = false;
+                            console.log("e=> ", e);
+                        }
+                    }
+                    // if (ifAdd) fs.writeFileSync(`${__dirname}/printing_forms/temp/mts_${hash}.pdf`, await pdfDoc.save());
+                }
+                fs.writeFileSync(`${__dirname}/printing_forms/temp/mts_${hash}.pdf`, await pdfDoc.save());
+            }
         }
+		
+        if (err.length > 0) obj.err = err;
+        else obj.status = 1;
+        console.log("obj=> ", obj);
 		return obj;
 	}
+    async test() {
+        let buffer = fs.readFileSync(`${__dirname}/printing_forms/documents/mts/test.pdf`);
+        let pdfDoc = await pdfLib.PDFDocument.load(buffer);
+        pdfDoc.registerFontkit(fontkit);
+
+        const fontBytes = fs.readFileSync(`${__dirname}/fonts/arial.ttf`);
+        const customFont = await pdfDoc.embedFont(fontBytes);
+
+        const form = pdfDoc.getForm();
+        let phone = form.getTextField('phone');
+        phone.setText("9288281650");
+        phone.updateAppearances(customFont);
+        let icc = form.getTextField('iccid');
+        icc.setText("8970101708754785885");
+        icc.updateAppearances(customFont);
+        form.flatten();
+        fs.writeFileSync(`${__dirname}/printing_forms/documents/mts/output.pdf`, await pdfDoc.save());
+    }
     async printReplacement(packet, toolbox, base, user) {
         console.log('запрос на создание печатной формы Замена SIM');
         let obj = {};

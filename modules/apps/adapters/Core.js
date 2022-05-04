@@ -57,7 +57,7 @@ class Core {
 		else if (typeof names === "string") arr.push(names);
 		if (arr.length > 0) {
 			for (let i = 0; i < arr.length; i++) {
-				if (this.#dicts[arr[i]] != "undefined") dicts.push({name: arr[i], list: this.#dicts[arr[i]]});
+				if (this.#dicts[arr[i]] != "undefined") dicts.push({name: arr[i], list: Array.from(this.#dicts[arr[i]])});
 			}
 		}
 		return dicts;
@@ -90,6 +90,11 @@ class Core {
 			this.#dicts[this.#dictsList[i].name] = rows;
 		}
 	}
+	async getNewDicts(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDicts( user, packet.data );
+		return obj;
+	}
 	async updateNewDicts(name) {
 		let dict = this.#dictsList.find(item=> item.name == name);
 		if (typeof dict !== 'undefined') {
@@ -101,6 +106,7 @@ class Core {
 			this.#dicts[name] = rows;
 		}
 	}
+
 	async initBases() {
 		for (let i=0; i<COMMONBASE.length; i++) this._connector.newBase(COMMONBASE[i]);
 		for (let operator in DATA) {
@@ -303,11 +309,7 @@ class Core {
 		if (err.length > 0) obj.err = err;
 		return obj;
 	}	
-	async getNewDicts(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
-		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
-		let obj = await this.#coreApi.GetDicts( user, packet.data );
-		return obj;
-	}
+	
 	async getGlobalAppDicts (packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
 		console.log("запрос глобальных справочников");
 		let dicts = {
@@ -1228,6 +1230,11 @@ class Core {
 		let obj = await this.#coreApi.GetUniversalJournal( user, packet.data );
 		return obj;
 	}
+	async createDocumentInStoreHouse( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.СreateDocumentInUniversalJournal( user, packet.data );
+		return obj;
+	}
 
 	async getDictMegafonStores( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
 		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
@@ -1299,6 +1306,7 @@ class Core {
 					'getDictDocTypesSingleId',
 					"editDocType",
 					"getStoreJournal",
+					"createDocumentInStoreHouse",
 
 					"getNewDicts",
 
@@ -1414,7 +1422,7 @@ class Core {
 									// 	//obj.list = result.data;
 									// }
 									for (let key in o) obj[key] = o[key];
-									obj.status = 1;
+									// obj.status = 1;
 									break;
 								}
 							}
@@ -1603,6 +1611,21 @@ let DATA = {
 					pseudoName: 'DEXMTSKCRDISTR',
 					description: 'МТС КЧР ДИСТРИБУЦИЯ',
 					pseudoRoute: 'mts_kcr_distr',
+					docid: 'DEXPlugin.Document.MTS.Jeans',
+					loggingDir: 'logs',
+					api: 'rdealer.ug.mts.ru/RemoteDealerWebServices',
+				}
+			},
+			{
+				name: 'mts_kbr_salp',
+				configuration: {
+					base: 'dex_mts_kbr_salp',
+					host: '192.168.0.33',
+					user: 'dex',
+					password: 'dex',
+					pseudoName: 'DEXMTSKBRSALP',
+					description: 'МТС КБР Салпагарова',
+					pseudoRoute: 'mts_kbr_salp',
 					docid: 'DEXPlugin.Document.MTS.Jeans',
 					loggingDir: 'logs',
 					api: 'rdealer.ug.mts.ru/RemoteDealerWebServices',

@@ -27,6 +27,7 @@ class AdapterYotaApi {
 		let err = [];
 		obj.list = [];
 		obj.operator = 'YOTA';
+		obj.status = -1;
 		let start, end, lowerCaseSearch;
 		if (packet.data.subaction === 'period') {
 			console.log('запрос периода');
@@ -176,6 +177,7 @@ class AdapterYotaApi {
 		}
 		console.log('отдали ответ');
 		if (err.length > 0) obj.err = err;
+		else obj.status = 1;
 		return obj;
 	}
 	async dicts(packet, toolbox, base, user, adapter) {
