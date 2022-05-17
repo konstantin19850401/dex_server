@@ -67,9 +67,12 @@ class Core {
 	async newInitDicts() {
 		this.#dictsList = [
 			{name: "users", table: "skyline.user", flds: ["uid","username","lastname","firstname","secondname"]},
+			{name: "userGroups", table: "skyline.user_groups", flds: ["id","user_group_id","name","apps","status"]},
+			{name: "apps", table: "skyline.dict_apps", flds: ["uid","title","status"]},
 			{name: "docTypes", table: "skyline.dict_doc_types", flds: ["uid","title","status"]},
 			{name: "stores", table: "skyline.dict_stores", flds: ["uid","dex_uid","parent","lastname","firstname","secondname","title","status"]},
 			{name: "docStatuses", table: "skyline.dict_doc_statuses", flds: ["uid","eng","title","status"]},
+			{name: "statuses", table: "skyline.dict_user_statuses", flds: ["uid","title"]},
 			{name: "operators", table: "skyline.dex_dict_operators", flds: ["uid","title","icc_length","msisdn_length","status"]},
 			{name: "typesProducts", table: "skyline.dict_types_products", flds: ["uid","title","status"]},
 			{name: "stocks", table: "skyline.dict_stocks", flds: ["uid","title","status"]},
@@ -78,6 +81,7 @@ class Core {
 			{name: "balance", table: "skyline.dex_dict_balance", flds: ["uid","title","status"]},
 			{name: "simTypes", table: "skyline.dict_sim_types", flds: ["uid","title","status"]},
 			{name: "contractors", table: "skyline.contractors", flds: ["uid","title","status"]},
+			{name: "units", table: "skyline.dict_units", flds: ["uid","title","lastname","firstname","secondname","region","data","date_create","fiz_address","legal_address","status"]},
 			{name: "megafonProfiles", table: "skyline.dex_dict_megafon_dispatch_profiles", flds: ["uid","name","title","code","status"]},
 			{name: "megafonStores", table: "skyline.dex_dict_megafon_stores", flds: ["id","megafon_code","megafon_sale_point_id","dex_store","dex_megafon_profile","status"]},
 		];
@@ -759,47 +763,49 @@ class Core {
 	}
 	async editUnit(  packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS  ) {
 		console.log("editUnit ", packet);
-		let obj = {};
-		let err = [];
-		obj.status = -1;
 		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
-		let appConfigufation = user.GetAppConfiguration('adapters');
-		if (user.AllowedApps.indexOf(this.name) == -1) err.push(`Для пользователя с uid = ${packet.uid} не доступно приложение ${this.name}`);
-		else {
-			let region;
-			let data = packet.data.fields;
-			if (typeof data.lastname === 'undefined' || data.lastname == '') err.push('Вы не указали фамилию');
-			if (typeof data.firstname === 'undefined' || data.firstname == '') err.push('Вы не указали имя');
-			if (typeof data.region === 'undefined' || data.region == '') err.push('Вы не указали регион');
-			if (typeof data.status === 'undefined' || data.status == '') err.push('Вы не указали статус');
-			let rows = await this.toolbox.sqlRequest('skyline', `SELECT * FROM dict_regions WHERE uid = '${data.region}'`);
-			if (rows.length == 0) err.push('Значение региона не принадлежит справочнику');
-			else region = rows[0];
-			if (err.length == 0) {
-				data.lastname = this.toolbox.normName(data.lastname);
-				data.firstname = this.toolbox.normName(data.firstname);
-				if (typeof data.secondname != 'undefined') data.secondname = this.toolbox.normName(data.secondname);
-				if (data.title == '') {
-					data.title = `пр. ${data.lastname} ${data.firstname}`;
-					if (typeof data.secondname != 'undefined') data.title = `${data.title} ${data.secondname}`;
-					data.title = `${data.title} - ${region.short_title}`;
-				}
-				let fields = ['lastname', 'firstname', 'secondname', 'region', 'title', 'status', 'doc_city'];
-				for (let i=0; i<fields.length; i++) {
-					if (typeof data[fields[i]] !== 'undefined') fields[i] = `${fields[i]}='${data[fields[i]]}'`;
-				}
-				let str = fields.join(',');
-				console.log(`UPDATE dict_units SET ${str}`);
-				let result = await this.toolbox.sqlRequest('skyline', `UPDATE dict_units SET ${str} WHERE uid = '${data.uid}'`);
-				if (result.affectedRows == 1) {
-					obj.status = 1;
-				} else {
-					err.push('Операция не была осуществлена');
-				}
-				console.log("result=> ", result);
-			}
-		}
-		if (err.length > 0) obj.err = err;
+		let obj = await this.#coreApi.EditUnitFromUnitsDictionary( user, packet.data );
+		// let obj = {};
+		// let err = [];
+		// obj.status = -1;
+		// let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		// let appConfigufation = user.GetAppConfiguration('adapters');
+		// if (user.AllowedApps.indexOf(this.name) == -1) err.push(`Для пользователя с uid = ${packet.uid} не доступно приложение ${this.name}`);
+		// else {
+		// 	let region;
+		// 	let data = packet.data.fields;
+		// 	if (typeof data.lastname === 'undefined' || data.lastname == '') err.push('Вы не указали фамилию');
+		// 	if (typeof data.firstname === 'undefined' || data.firstname == '') err.push('Вы не указали имя');
+		// 	if (typeof data.region === 'undefined' || data.region == '') err.push('Вы не указали регион');
+		// 	if (typeof data.status === 'undefined' || data.status == '') err.push('Вы не указали статус');
+		// 	let rows = await this.toolbox.sqlRequest('skyline', `SELECT * FROM dict_regions WHERE uid = '${data.region}'`);
+		// 	if (rows.length == 0) err.push('Значение региона не принадлежит справочнику');
+		// 	else region = rows[0];
+		// 	if (err.length == 0) {
+		// 		data.lastname = this.toolbox.normName(data.lastname);
+		// 		data.firstname = this.toolbox.normName(data.firstname);
+		// 		if (typeof data.secondname != 'undefined') data.secondname = this.toolbox.normName(data.secondname);
+		// 		if (data.title == '') {
+		// 			data.title = `пр. ${data.lastname} ${data.firstname}`;
+		// 			if (typeof data.secondname != 'undefined') data.title = `${data.title} ${data.secondname}`;
+		// 			data.title = `${data.title} - ${region.short_title}`;
+		// 		}
+		// 		let fields = ['lastname', 'firstname', 'secondname', 'region', 'title', 'status', 'doc_city', 'address'];
+		// 		for (let i=0; i<fields.length; i++) {
+		// 			if (typeof data[fields[i]] !== 'undefined') fields[i] = `${fields[i]}='${data[fields[i]]}'`;
+		// 		}
+		// 		let str = fields.join(',');
+		// 		console.log(`UPDATE dict_units SET ${str}`);
+		// 		let result = await this.toolbox.sqlRequest('skyline', `UPDATE dict_units SET ${str} WHERE uid = '${data.uid}'`);
+		// 		if (result.affectedRows == 1) {
+		// 			obj.status = 1;
+		// 		} else {
+		// 			err.push('Операция не была осуществлена');
+		// 		}
+		// 		console.log("result=> ", result);
+		// 	}
+		// }
+		// if (err.length > 0) obj.err = err;
 		return obj;
 	}
 	async delElementsFromDict( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
@@ -1252,6 +1258,55 @@ class Core {
 		return obj;
 	}
 
+	async printAgreementUnits( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.PrintUnitsAgreementDocuments( user, packet.data );
+		return obj;
+	}
+
+	async getDevelopJournal( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDevelopJournal( user, packet.data );
+		return obj;
+	}
+	async createNewRecordInDevelopJournal( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.CreateNewRecordInDevelopJournal( user, packet.data );
+		return obj;
+	}
+
+	async getDictStatuses( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetStatuses( user, packet.data );
+		return obj;
+	}
+	async getDictStatusesSingleId( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetStatusFromStatusesDictionary( user, packet.data );
+		return obj;
+	}
+	async editStatus( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.EditStatusFromStatusesDictionary( user, packet.data );
+		return obj;
+	}
+	async createNewStatus( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.CreateNewStatusInStatusesDictionary( user, packet.data );
+		return obj;
+	}
+
+	async getDictSingleId( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetRecordFromDictById( user, packet.data );
+		return obj;
+	}
+	async getDictRecords( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDictRecords( user, packet.data );
+		return obj;
+	}
+
 	// главный вход для api приложения
 	async appApi(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
 		console.log("похоже будет вызов api");
@@ -1312,7 +1367,21 @@ class Core {
 
 					"getDictMegafonStores",
 					"getDictMegafonStoresSingleId",
-					"editMegafonStore"
+					"editMegafonStore",
+
+					'printAgreementUnits',
+
+					'getDevelopJournal',
+					'createNewRecordInDevelopJournal',
+
+					'getDictStatuses',
+					'getDictStatusesSingleId',
+					'editStatus',
+					'createNewStatus',
+
+					'getDictSingleId',
+					'getDictRecords'
+
 				];
 
 				// let coreApi = new CoreApi(DATA);

@@ -144,7 +144,7 @@
 	"FizDocOrg": {
 		"left": 210,
 		"top": 17,
-		"fontSize": 7,
+		"fontSize": 6,
 		"css": {
 			"width": 180,
 			"size": 7.5

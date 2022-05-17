@@ -61,7 +61,7 @@ class CoreApi extends Api {
 		return obj;
 	}
 	
-	// удаление записи из справочника
+	// универсальное удаление записи из справочника по id записи
 	async DeleteItemFromDictionary( user, data ) {
 		console.log(`запрос DeleteItemFromDictionary для appid = ${this.#appid}`);
 		let obj = {status: -1, errs: [], deleted: []};
@@ -71,9 +71,10 @@ class CoreApi extends Api {
 			let dicts = [
 				{id: 'units', table: 'dict_units', field: 'uid'},
 				{id: 'userGroups', table: 'user_groups', field: 'user_group_id'},
-				{id: 'user', table: 'user', field: 'uid'},
+				{id: 'user', table: 'user', field: 'id_record'},
 				{id: 'stores', table: 'dict_stores', field: 'uid'},
-				{id: 'docTypes', table: 'dict_doc_types', field: 'uid'}
+				{id: 'docTypes', table: 'dict_doc_types', field: 'uid'},
+				{id: 'statuses', table: 'dict_user_statuses', field: 'uid'}
 			]
 			let dict = dicts.find(item=> item.id == data.dict);
 			if ( typeof dict !== 'undefined' ) {
@@ -136,6 +137,87 @@ class CoreApi extends Api {
 		}
 		return obj;
 	}
+	// универсальный запрос записи из справочника по id записи
+	async GetRecordFromDictById( user, data ) {
+		console.log(`запрос GetRecordFromDictById для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			if (typeof data.id === 'undefined') obj.errs.push('Вы не указали id записи');
+			if (obj.errs.length == 0) {
+				let dicts = [
+					{name: 'regions', table: 'dict_regions', byId: 'id', fields: ['id', 'uid','title','short_title','def_bases','status']},
+					{name: 'statuses', table: 'dict_user_statuses', byId: 'uid', fields: ['uid','title']},
+				]
+				let dict = dicts.find(item => item.name == data.dict);
+				if (typeof dict === 'undefined') obj.errs.push('Указанный вами справочник не существует');
+				else {
+					let rows = await this.Toolbox.sqlRequest('skyline', `
+						SELECT ${dict.fields.join(',')}
+						FROM ${dict.table}
+						WHERE ${dict.byId} = '${data.id}'
+					`);
+					if ( rows.length > 0 ) { 
+						obj.list = rows;
+						obj.status = 1;
+					} else obj.errs.push( 'Запрошенная вами запись не существует!' );
+				}
+			}
+		}
+		return obj;
+	}
+	// универсальный запрос справочника
+	async GetDictRecords( user, data ) {
+		console.log(`запрос GetDictRecords для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			if (obj.errs.length == 0) {
+				let dicts = [
+					{name: 'regions', table: 'dict_regions', byId: 'id', fields: ['id', 'uid','title','short_title','def_bases','status'], replace: [
+						{field: 'status', dict: 'statuses', id: 'uid', title: 'title'}
+					]},
+					{name: 'statuses', table: 'dict_user_statuses', byId: 'uid', fields: ['uid','title']},
+				]
+				let dict = dicts.find(item => item.name == data.dict);
+				if (typeof dict === 'undefined') obj.errs.push('Указанный вами справочник не существует');
+				else {
+					let rows = await this.Toolbox.sqlRequest('skyline', `
+						SELECT ${dict.fields.join(',')}
+						FROM ${dict.table}
+					`);
+
+					if (typeof dict.replace !== 'undefined') {
+						let tdicts = [];
+						dict.replace.map(item=> tdicts.push(item.dict));
+						let dicts = this.#core.DictsByNames(tdicts);
+						let odicts = {};
+						dicts.map(item=> odicts[item.name] = item);
+						console.log(odicts);
+						for (let i = 0; i <rows.length; i++) {
+							for (let j = 0; j < dict.replace.length; j++) {
+								let d = odicts[dict.replace[j].dict];
+								
+								let dd = d.list.find(item => item[dict.replace[j].id] == rows[i][dict.replace[j].id]);
+								console.log("dd=> ", dd);
+								if (typeof dd !== 'undefined') rows[i][dict.replace[j].id] = dd[dict.replace[j].title]
+							}
+						}
+					} else {
+						obj.list = rows;
+					}
+
+					
+					obj.status = 1;
+				}
+			}
+		}
+		return obj;
+	}
 
 	// справочник пользователей
 	async GetUsersDictionary( user, data ) {
@@ -145,9 +227,18 @@ class CoreApi extends Api {
 		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
 		else {
 			let rows = await this.Toolbox.sqlRequest(`skyline`, `
-				SELECT uid, username, lastname, firstname, user_group_id 
+				SELECT id_record as uid, username, lastname, firstname, user_group_id, status 
 				FROM user
 			`);
+			let dicts = this.#core.DictsByNames(["userGroups", 'statuses']);
+			let userGroups = dicts.find(item=> item.name == "userGroups");
+			let statuses = dicts.find(item=> item.name == "statuses");
+			for (let i = 0; i < rows.length; i++) {
+				let reg = userGroups.list.find(item=> item.user_group_id == rows[i].user_group_id);
+				if (typeof reg !== 'undefined') rows[i].user_group_id = reg.name;
+				let status = statuses.list.find(item=> item.uid == rows[i].status);
+				if (typeof status !== 'undefined') rows[i].status = status.title;
+			}
 			if ( rows.length > 0 ) obj.list = rows;
 			obj.status = 1;
 		}
@@ -161,9 +252,9 @@ class CoreApi extends Api {
 		else {
 			if (typeof data.id !== 'undefined') {
 				let rows = await this.Toolbox.sqlRequest(`skyline`, `
-					SELECT uid, username, lastname, firstname, secondname, user_group_id, status 
+					SELECT id_record as uid, username, lastname, firstname, secondname, user_group_id, status 
 					FROM user 
-					WHERE uid = '${data.id}'
+					WHERE id_record = '${data.id}'
 				`);
 				if ( rows.length > 0 ) { 
 					obj.list = rows;
@@ -272,7 +363,7 @@ class CoreApi extends Api {
 		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
 		else {
 			let rows = await this.Toolbox.sqlRequest(`skyline`, `
-				SELECT user_group_id, name, apps, status 
+				SELECT user_group_id AS uid, name, apps, status 
 				FROM user_groups 
 				ORDER BY user_group_id
 			`);
@@ -353,11 +444,22 @@ class CoreApi extends Api {
 		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
 		else {
 			let rows = await this.Toolbox.sqlRequest('skyline', `
-				SELECT uid, lastname, firstname, secondname, title FROM dict_units 
-				ORDER BY uid 
+				SELECT uid, lastname, firstname, secondname, title, region, status FROM dict_units 
+				ORDER BY title 
 			`);
-			obj.status = 1;
+			if (rows.length > 0) {
+				let dicts = this.#core.DictsByNames(["regions","statuses"]);
+				let regions = dicts.find(item=> item.name == "regions");
+				let statuses = dicts.find(item=> item.name == "statuses");
+				for (let i = 0; i < rows.length; i++) {
+					let reg = regions.list.find(item=> item.uid == rows[i].region);
+					if (typeof reg !== 'undefined') rows[i].region = reg.short_title;
+					let status = statuses.list.find(item => item.uid == rows[i].status);
+					if (typeof status !== 'undefined') rows[i].status = status.title;
+				}
+			} 
 			obj.list = rows;
+			obj.status = 1;	
 		}
 		return obj;
 	}
@@ -369,12 +471,19 @@ class CoreApi extends Api {
 		else {
 			if (typeof data.id !== 'undefined') {
 				let rows = await this.Toolbox.sqlRequest('skyline', `
-					SELECT uid, lastname, firstname, secondname, title, region, doc_city, status, data 
+					SELECT uid, lastname, firstname, secondname, title, region, doc_city, fiz_address, legal_address, status, data 
 					FROM dict_units 
 					WHERE uid = '${ data.id }' 
 				`);
 				if (rows.length > 0) {
 					obj.status = 1;
+					for (let i = 0; i < rows.length; i++) {
+						if (rows[i].data !== '') {
+							let json = JSON.parse(rows[i].data);
+							for (let key in json) rows[i][key] = json[key];
+						}
+					}
+
 					obj.list = rows;
 					// так же торговые точки привяжем
 					if (rows.length > 0) {
@@ -429,14 +538,24 @@ class CoreApi extends Api {
 					if (typeof newUnitData.secondname != 'undefined' && newUnitData.secondname != '') newUnitData.title = `${newUnitData.title} ${newUnitData.secondname}`;
 					newUnitData.title = `${newUnitData.title} - ${region.short_title}`;
 				}
-				let fields = ['lastname', 'firstname', 'secondname', 'region', 'title', 'status', 'doc_city'];
+				let fields = ['lastname', 'firstname', 'secondname', 'fiz_address', 'legal_address','region', 'title', 'status'];
 				for (let i=0; i<fields.length; i++) {
 					if (typeof newUnitData[fields[i]] !== 'undefined') fields[i] = `${fields[i]}='${newUnitData[fields[i]]}'`;
+					else fields[i] = '';
 				}
-				// console.log("fields====> ", fields);
 				let str = fields.join(',');
+				fields = ['inn', 'ogrn', 'agreement_number', 'docSeries', 'docNumber', 'docDate', 'docOrg', 'docOrgCode'];
+				let dataf = {};
+				for (let i=0; i<newUnitData.length; i++) {
+					if (typeof newUnitData[fields[i]] !== 'undefined') dataf[fields[i]] = newUnitData[fields[i]];
+					else dataf[fields[i]] = '';
+				}
+				let jsonDataf = JSON.stringify(dataf);
+
+				console.log(`INSERT INTO dict_units SET uid='${uid}', ${str}, created = '${user.UserId}', data='${jsonDataf}'`);
+
 				let result = await this.Toolbox.sqlRequest('skyline', `
-					INSERT INTO dict_units SET uid='${uid}', ${str}, created = '${user.UserId}', data='' 
+					INSERT INTO dict_units SET uid='${uid}', ${str}, created = '${user.UserId}', data='${jsonDataf}' 
 				`);
 
 				if (result.affectedRows != 1) obj.errs.push("Ошибка добавления нового отделения. Проверьте вводимые данные!");
@@ -462,6 +581,205 @@ class CoreApi extends Api {
 				data.fields.parent = uid;
 				await this.CreateNewStoreInStoresDictionary( user, data );
 				
+			}
+		}
+		return obj;
+	}
+	async EditUnitFromUnitsDictionary( user, data ) {
+		console.log(`запрос EditUnitFromUnitsDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let edits = data.fields;
+			if (typeof edits.lastname === 'undefined' || edits.lastname == '') obj.errs.push('Вы не указали фамилию');
+			if (typeof edits.firstname === 'undefined' || edits.firstname == '') obj.errs.push('Вы не указали имя');
+			if (typeof edits.region === 'undefined' || edits.region == '') obj.errs.push('Вы не указали регион');
+			if (typeof edits.status === 'undefined' || edits.status == '') obj.errs.push('Вы не указали статус');
+			let dicts = this.#core.DictsByNames(["regions"]);
+			let regions = dicts.find(item=> item.name == "regions");
+			let reg = regions.list.find(item=> item.uid == edits.region);
+			if (typeof reg === 'undefined') obj.errs.push('Значение региона не принадлежит справочнику');
+			if (obj.errs.length == 0) {
+				edits.lastname = this.Toolbox.normName(edits.lastname);
+				edits.firstname = this.Toolbox.normName(edits.firstname);
+				if (typeof edits.secondname != 'undefined') edits.secondname = this.Toolbox.normName(edits.secondname);
+				if (edits.title == '') {
+					edits.title = `пр. ${edits.lastname} ${edits.firstname}`;
+					if (typeof edits.secondname != 'undefined') edits.title = `${edits.title} ${edits.secondname}`;
+					edits.title = `${edits.title} - ${reg.short_title}`;
+				}
+				let flds = [];
+				let fields = ['lastname', 'firstname', 'secondname', 'region', 'title', 'status', 'fiz_address', 'legal_address'];
+				for (let i=0; i<fields.length; i++) {
+					// if (typeof edits[fields[i]] !== 'undefined') fields[i] = `${fields[i]}='${edits[fields[i]]}'`;
+					if (typeof edits[fields[i]] !== 'undefined') flds.push(`${fields[i]}='${edits[fields[i]]}'`);
+				}
+				fields = ['inn', 'ogrn', 'agreement_number', 'docSeries', 'docNumber', 'docDate', 'docOrg', 'docOrgCode'];
+				let dataf = {};
+				for (let i=0; i<fields.length; i++) {
+					if (typeof edits[fields[i]] !== 'undefined') dataf[fields[i]] = edits[fields[i]];
+				}
+				let jsonDataf = JSON.stringify(dataf);
+				let str = flds.join(',');
+				// console.log(`UPDATE dict_units SET ${str}`);
+				let result = await this.Toolbox.sqlRequest('skyline', `UPDATE dict_units SET ${str}, data = '${jsonDataf}' WHERE uid = '${edits.uid}'`);
+				if (result.affectedRows == 1) obj.status = 1;
+				else err.push('Операция не была осуществлена');
+			}
+		}
+		return obj;
+	}
+	async PrintUnitsAgreementDocuments( user, data ) {
+		console.log(`запрос PrintUnitsAgreementDocuments для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], link: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.printForm === 'undefined') obj.errs.push('Вы не указали форму для печати');
+			if (!Array.isArray(data.units)) obj.errs.push('Отделения долны передаваться массивом');
+			else {
+				if (data.units.length == 0) obj.errs.push('Вы не указали отделения, для которых необходимо создать печатную форму');
+			}
+			let dicts = this.#core.DictsByNames(['units','regions']);
+			let units = dicts.find(item=> item.name == "units");
+			let regions = dicts.find(item=> item.name == "regions");
+			for (let i = 0; i < data.units.length; i++) {
+				let unit = units.list.find(item => item.uid == data.units[i]);
+				if (typeof unit === 'undefined') { 
+					obj.errs.push('Указанное вами отделение не существует');
+					break;
+				}
+			}
+			if (obj.errs.length == 0) {
+				let months = ['Января','Февраля','Марта','Апреля','Мая','Июня','Июля','Августа','Сентября','Октября','Ноября','Декабря'];
+
+
+				let path = `${this.Toolbox.rootPath}/printing_forms/service_agreement/`;
+				if (data.printForm == 'doc.print.beeline') path += 'beeline/';
+				if (data.printForm == 'doc.print.mts') path += 'mts/';
+				if (data.printForm == 'doc.print.megafon') path += 'megafon/';
+				let pizZip = this.Toolbox.pizZip;
+				let docxtemplater = this.Toolbox.docxtemplater;
+				let docxMerger = this.Toolbox.docxMerger;
+				let arrLinks = [];
+				for (let i = 0; i < data.units.length; i++) {
+					let hash = this.Toolbox.getHash();
+					let link = `agreement_${hash}.docx`;
+					obj.link.push(link);
+					let pathUnit = path;
+					let unit = units.list.find(item => item.uid == data.units[i]);
+					let region = regions.list.find(item => item.uid == unit.region);
+					let regionTitle = '';
+					if (typeof region !== '') regionTitle = region.short_title;
+					let fullFio = this.Toolbox.createFullFio(unit.lastname, unit.firstname, unit.secondname);
+					let fio = this.Toolbox.fullNameToFio(unit.lastname, unit.firstname, unit.secondname);
+					let addressAndDetails = '', fizDocData = '';
+					let unitData = typeof unit.data != 'undefined' ? JSON.parse(unit.data) : {};
+					unitData.ogrn = undefined;
+					// unitData.docSeries = undefined;
+					// console.log("unitData=> ", unitData);
+					let docFields = {};
+					let year = (new Date).getFullYear().toString().substring(2);
+					let moment = this.Toolbox.getMoment();
+					let subDate = moment(unit.date_create);
+					// console.log("subDate=> ",subDate);
+					let subDateDay = subDate.day() + 1;
+					let subDateMonth = subDate.month() + 1;
+					let subDateYear = subDate.year();
+
+					// console.log("unit.date_create=> ",unit.date_create," subDateDay=> ", subDateDay, " subDateMonth=> ", subDateMonth, " subDateYear=> ", subDateYear);
+
+
+
+					if (typeof unitData.agreement_number !== 'undefined') docFields.AGR_NUM = unitData.agreement_number;
+					docFields.FULLFIO = fullFio;
+					docFields.FIO = fio;
+					docFields.REGTITLE = regionTitle;
+					docFields.YEAR = year;
+					docFields.INN = '';
+					docFields.OGRN = '';
+					docFields.SUB = '';
+					docFields.SUBDATA = '';
+					docFields.SUBDATEDAY = subDateDay < 10 ? `0${subDateDay}` : subDateDay;
+					docFields.SUBDATEMONTH = subDateMonth < 10 ? `0${subDateMonth}` : subDateMonth;
+					docFields.SUBDATEMONTHTITLE = months[subDateMonth];
+					docFields.SUBDATEYEAR = subDateYear;
+					docFields.SUBDATE = `${docFields.SUBDATEDAY}.${docFields.SUBDATEMONTH}.${docFields.SUBDATEYEAR}`;
+					if (typeof unitData.ogrn !== 'undefined') {
+						docFields.SUB = `Индивидуальный предприниматель \n${fullFio}`;
+						docFields.OGRN = unitData.ogrn;
+						docFields.SUBDATA = `Индивидуальный предприниматель ${fullFio}, действующей(ая) на основании свидетельства о внесении записи в ЕГРИП с присвоением ОГРН ${docFields.OGRN}`;
+						if (typeof unitData.inn !== 'undefined') docFields.INN = unitData.inn;
+					} else {
+						docFields.SUB = fullFio;
+						docFields.SUBDATA = `${fullFio} `;
+						if (typeof unitData.inn !== 'undefined') { 
+							docFields.INN = unitData.inn;
+							docFields.SUBDATA += `(ИНН ${docFields.INN})`;
+						}
+						if (typeof unitData.docSeries !== 'undefined' && unitData.docSeries !== '') {
+							docFields.SUBDATA += ` паспорт серия ${unitData.docSeries} № ${unitData.docNumber}, выдан ${unitData.docOrg} ${unitData.docDate}г. код подразделения: ${unitData.docOrgCode}, адрес регистрации: unit.fiz_address`;
+						}
+					}
+					if (docFields.INN != '') addressAndDetails += `ИНН ${docFields.INN}\n`;
+					if (docFields.OGRN != '') addressAndDetails += `ОГРН ${docFields.OGRN}\n`;
+					if (typeof unitData.docSeries !== 'undefined' && typeof unitData.docNumber !== 'undefined' && unitData.docSeries !== '' && unitData.docNumber !== '') {
+						addressAndDetails += `\nпаспорт гражданина РФ серия ${unitData.docSeries} № ${unitData.docNumber}\n`;
+						addressAndDetails += `выдан ${unitData.docOrg} ${unitData.docDate}г.\n`;
+						addressAndDetails += `код подразделения: ${unitData.docOrgCode}\n`;
+						addressAndDetails += `адрес регистрации: ${unit.fiz_address}\n`;
+					}
+					pathUnit += `${region.short_title}/agreement.docx`;
+
+
+					
+					
+
+
+
+					
+
+					// if (typeof unitData.docSeries !== 'undefined' && typeof unitData.docNumber !== 'undefined' && unitData.docSeries !== '' && unitData.docNumber !== '') {
+					// 	addressAndDetails += `паспорт гражданина РФ серия ${unitData.docSeries} № ${unitData.docNumber}\n`;
+					// 	addressAndDetails += `выдан ${unitData.docOrg} ${unitData.docDate}г.\n`;
+					// 	addressAndDetails += `код подразделения: ${unitData.docOrgCode}\n`;
+					// 	addressAndDetails += `адрес регистрации: ${unit.fiz_address}\n`;
+					// }
+
+					docFields.ADDRESSANDDETAILS = addressAndDetails;
+
+					console.log("docFields=> ", docFields);
+					
+					
+					let content = this.Toolbox.fs.readFileSync( this.Toolbox.path.resolve(pathUnit), {type:"binary"});
+					let zip = new pizZip(content);
+					let doc = new docxtemplater(zip, {
+					    paragraphLoop: true,
+					    linebreaks: true,
+					});
+					
+					doc.render(docFields);
+					const buf = doc.getZip().generate({
+					    type: "nodebuffer",
+					    compression: "DEFLATE",
+					});
+
+					this.Toolbox.fs.writeFileSync(this.Toolbox.path.resolve(`${this.Toolbox.rootPath}/printing_forms/temp/${link}`), buf);
+				}
+				// if (arrLinks.length == 1) obj.link = [arrLinks[0]];
+				// else {
+				// 	let arrFiles = [];
+				// 	for (let i = 0; i < arrLinks.length; i++) {
+				// 		let file = this.Toolbox.fs.readFileSync(this.Toolbox.path.resolve(`${this.Toolbox.rootPath}/printing_forms/temp`, arrLinks[i]), 'binary');
+				// 		arrFiles.push(file);
+				// 	}
+				// 	let docx = new docxMerger({}, arrFiles);
+				// 	let hash = this.Toolbox.getHash();
+				// 	obj.link = `agreement_${hash}.docx`;
+				// 	docx.save('nodebuffer', data => this.Toolbox.fs.writeFile(`${this.Toolbox.rootPath}/printing_forms/temp/${obj.link}`, data, err => { if (err) console.log(err) }));
+				// }
+				obj.status = 1;
 			}
 		}
 		return obj;
@@ -638,6 +956,7 @@ class CoreApi extends Api {
 		let userConfiguration = this.#ValidateUser( user );
 		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
 		else {
+			if (typeof data.item !== 'undefined') obj.item = data.item;
 			let result = await this.Toolbox.request({
 				url: `https://kladr-api.ru/api.php?query=${encodeURIComponent(data.string)}&oneString=1&limit=15&withParent=1`,
 				headers: {
@@ -677,10 +996,38 @@ class CoreApi extends Api {
 			let rows = await this.Toolbox.sqlRequest(`skyline`, `
 				SELECT *
 				FROM develop_journal
-				ORDER BY date 
+				ORDER BY date DESC 
 			`);
-			if ( rows.length > 0 ) obj.list = rows;
+			if ( rows.length > 0 ) { 
+				let dicts = this.#core.DictsByNames(["users"]);
+				let users;
+				if (dicts.length > 0) users = dicts.find(item=> item.name == "users");
+				if (typeof users !== 'undefined') {
+					for (let i = 0; i < rows.length; i++) {
+						let user = users.list.find(item => item.uid == rows[i].author);
+						if (typeof user !== 'undefined') rows[i].author = this.Toolbox.fullNameToFio(user.lastname, user.firstname, user.secondname);
+					}
+				}
+				obj.list = rows;
+			}
 			obj.status = 1;
+		}
+		return obj;
+	}
+	async CreateNewRecordInDevelopJournal( user, data ) {
+		console.log(`запрос CreateNewRecordInDevelopJournal для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.fields.description !== 'undefined') {
+				let result = await this.Toolbox.sqlRequest('skyline', `
+					INSERT INTO develop_journal 
+					SET description='${data.fields.description}', author = '${user.UserId}'
+				`);
+				if (result.affectedRows == 1) obj.status = 1;
+				else obj.errs.push("Ошибка добавления нового типа документа. Проверьте вводимые данные!");
+			} else obj.errs.push("Вы не указали описание в записи");
 		}
 		return obj;
 	}
@@ -781,6 +1128,7 @@ class CoreApi extends Api {
 		return obj;
 	}
 
+	// универсальный журнал
 	async GetUniversalJournal( user, data ) {
 		console.log(`запрос GetUniversalJournal для appid = ${this.#appid}`);
 		let obj = {status: -1, errs: [], list: []};
@@ -975,21 +1323,25 @@ class CoreApi extends Api {
 		return obj;
 	}
 
+	// справочник точек продаж мегафон
 	async GetMegafonStoresDictionary( user, data ) {
 		console.log(`запрос GetMegafonStoresDictionary для appid = ${this.#appid}`);
 		let obj = {status: -1, errs: [], list: []};
 		let userConfiguration = this.#ValidateUser( user );
 		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
 		else {
-			let dicts = this.#core.DictsByNames(["megafonStores","stores","megafonProfiles"]);
+			let dicts = this.#core.DictsByNames(["megafonStores","stores","megafonProfiles","statuses"]);
 			let mStores = dicts.find(item=> item.name == "megafonStores");
 			let uStores = dicts.find(item=> item.name == "stores");
 			let megaProfiles = dicts.find(item=> item.name == "megafonProfiles");
+			let statuses = dicts.find(item=> item.name == "statuses");
 			for (let i = 0; i < mStores.list.length; i++) {
 				let unitStore = uStores.list.find(item=> item.dex_uid == mStores.list[i].dex_store);
 				if (typeof unitStore !== "undefined") mStores.list[i].dex_store = unitStore.title;
 				let mProfiles = megaProfiles.list.find(item=> item.code == mStores.list[i].dex_megafon_profile);
 				if (typeof mProfiles !== "undefined") mStores.list[i].dex_megafon_profile = mProfiles.title;
+				let status = statuses.list.find(item=> item.uid == mStores.list[i].status);
+				if (typeof mProfiles !== "undefined") mStores.list[i].status = status.title;
 			}
 			obj.list = mStores.list;				
 			obj.status = 1;
@@ -1050,5 +1402,98 @@ class CoreApi extends Api {
 		}
 		return obj;
 	}
+
+	// справочник статусов
+	async GetStatuses( user, data ) {
+		console.log(`запрос GetStatuses для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let rows = await this.Toolbox.sqlRequest(`skyline`, `
+				SELECT uid, title
+				FROM dict_user_statuses
+				ORDER BY uid
+			`);
+			if ( rows.length > 0 ) obj.list = rows;
+			obj.status = 1;
+		} 
+		return obj;
+	}
+	async GetStatusFromStatusesDictionary( user, data  ) {
+		console.log(`запрос GetStatusFromStatusesDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.id !== 'undefined') {
+				let rows = await this.Toolbox.sqlRequest('skyline', `
+					SELECT uid, title
+					FROM dict_user_statuses
+					WHERE uid = '${data.id}'
+				`);
+				if ( rows.length > 0 ) {
+					obj.list = rows;
+					obj.status = 1;
+				} else obj.errs.push( 'Запрошенная вами запись не существует!' );
+			} else obj.errs.push("Вы не указали, что запрашивать");
+		}
+		return obj;
+	}
+	async EditStatusFromStatusesDictionary( user, data ) {
+		console.log(`запрос EditStatusFromStatusesDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let edit = data.fields;
+			if (typeof edit.uid === "undefined" || edit.uid == "") obj.errs.push("Вы не указали uid");
+			if (typeof edit.title === "undefined") obj.errs.push("Вы не указали title");
+			if (obj.errs.length == 0) {
+				let row = await this.Toolbox.sqlRequest('skyline', `
+					UPDATE dict_user_statuses 
+					SET title = '${edit.title}'
+					WHERE uid = '${edit.uid}'`);
+				if ( row.affectedRows == 1 ) { 
+					obj.status = 1;
+					obj.list.push({uid: edit.uid, title: edit.title});
+				}
+				else obj.errs.push('Редактирование записи завершилось с ошибкой!');
+			}
+		}
+		return obj;
+	}
+	async CreateNewStatusInStatusesDictionary( user, data ) {
+		console.log(`запрос CreateNewStatusInStatusesDictionary для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let newData = data.fields;
+			if (typeof newData.uid === "undefined" || newData.uid == "") obj.errs.push("Вы не указали id");
+			else {
+				let rows = await this.Toolbox.sqlRequest('skyline', `
+					SELECT * FROM dict_user_statuses
+					WHERE uid = '${newData.uid}'
+				`);
+				if (rows.length > 0) obj.errs.push("Данный id уже занят");
+			}
+			if (typeof newData.title === "undefined" || newData.title == "") obj.errs.push("Вы не указали наименование");
+			if (obj.errs.length == 0) {
+				let result = await this.Toolbox.sqlRequest('skyline', `
+					INSERT INTO dict_user_statuses 
+					SET uid='${newData.uid}', title = '${newData.title}'`
+				);
+				if (result.affectedRows == 1) {
+					obj.status = 1;
+				} else {
+					obj.errs.push("Ошибка добавления нового статуса. Проверьте вводимые данные!");
+				}
+			}
+		}
+		return obj;
+	}
+
+
 }
 module.exports = CoreApi;

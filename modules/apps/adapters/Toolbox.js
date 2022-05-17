@@ -11,6 +11,10 @@ const bwipjs = require('bwip-js');
 const crypto = require('crypto-js');
 const exec = require('child_process').exec;
 const csvWriter = require('csv-writer').createObjectCsvWriter;
+const PizZip = require("pizzip");
+const Docxtemplater = require("docxtemplater");
+const path = require('path');
+const docxMerger = require('docx-merger');
 
 class Toolbox {
 	constructor(connector) {
@@ -450,7 +454,7 @@ class Toolbox {
         if (newStr != name) name = newStr;
         return name;
     }
-    // преобразование Фамилия Имя Отчество в ФИО
+    // преобразование Фамилия Имя Отчество в Фамилия И.О.
     fullNameToFio(lastName, firstName, secondName) {
         let fio = this.normName(lastName);
         if (typeof firstName !== 'undefined' && firstName != '') {
@@ -461,6 +465,14 @@ class Toolbox {
                 fio += `${snameCharacter}.`;
             }
         }
+        return fio;
+    }
+    // ФИО с отбрасыванием пустых значений 
+    createFullFio(lastName, firstName, secondName) {
+        let fio = '';
+        if (typeof lastName !== 'undefined' && lastName != '') fio += this.normName(lastName);
+        if (typeof firstName !== 'undefined' && firstName != '') fio += ` ${this.normName(firstName)}`;
+        if (typeof secondName !== 'undefined' && secondName != '') fio += ` ${this.normName(secondName)}`;
         return fio;
     }
     // получение уникального от времени хэш-значения
@@ -622,10 +634,13 @@ class Toolbox {
         return moment(date1).isAfter(date2);
     }
     // получение текущей даты
-    moment(date) {
+    moment(date, format) {
         try {
             // console.log("date=>>> ", Date(date))
-            if (Date(date)) return moment(date);
+            if (Date(date)) {
+                if (typeof format !== 'undefined') return moment(date, format);
+                return moment(date);
+            }
             else return moment();
         } catch (e) {
             return undefined;
@@ -784,6 +799,27 @@ class Toolbox {
     getCSVWriter() {
         return csvWriter;
     }
+    // работа с doc pizZip
+    get pizZip() {
+        return PizZip;
+    }
+    // работа с doc
+    get docxtemplater() {
+        return Docxtemplater;
+    }
+    // модуль для объединения docx
+    get docxMerger() {
+        return docxMerger;
+    }
+    get fs() {
+        return fs;
+    }
+    get path() {
+        return path;
+    }
+    get rootPath() {
+        return __dirname;
+    } 
 }
 
 module.exports = Toolbox;
