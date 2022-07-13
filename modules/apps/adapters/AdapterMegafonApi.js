@@ -5,8 +5,21 @@ const pdf2base64 = require('pdf-to-base64');
 // const bwipjs = require('bwip-js');
 
 class AdapterMegafonApi {
+    #appid = "adapters";
+    #operator = "MEGAFON";
 	constructor() {
         this.docid = 'DEXPlugin.Document.Mega.EFD.Fiz';
+    }
+    #ValidateUser( user ) {
+        let obj = {errs: [], configuration: null};
+        if ( typeof user !== 'undefined' ) {
+            if ( user.AllowedApps.indexOf(this.#appid) != -1 ) {
+                let userConfiguration = user.GetAppConfiguration(this.#appid);
+                if ( typeof userConfiguration !== 'undefined' ) obj.configuration = userConfiguration;
+                else obj.errs.push(`У пользователя ${user.UserName} не найдена конфигурация для приложения ${this.#appid}`);
+            } else obj.errs.push(`Для пользователя ${user.UserName} не доступно приложение ${this.#appid}`);
+        } else obj.errs('Пользователь отсутствует!');
+        return obj;
     }
     async list(packet, toolbox, base, user, adapter, schemas, dicts, core) {
         // console.log("list ", base);
@@ -157,6 +170,196 @@ class AdapterMegafonApi {
         console.log('отдали ответ');
         if (err.length > 0) obj.err = err;
         else obj.status = 1;
+        return obj;
+    }
+    async listV1( packet, toolbox, base, user, adapter, schemas, dicts, core ) {
+        console.log(`запрос listV1 для appid = adapters `, packet);
+        let obj = {status: -1, errs: [], list: []};
+        let userConfiguration = this.#ValidateUser( user );
+        if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+        else {
+            if (typeof packet.data.subaction !== "undefined") {
+                if (packet.data.subaction == "period") {
+                    let start, end, search = "", units = [], statuses = [], table = "journal";
+                    let tables = ["journal", "archive"];
+                    if (typeof packet.data.filter === "undefined") {
+                        start = toolbox.moment().format('YYYYMMDD');
+                        end = start;
+                        packet.data.filter = {};
+                    } else {
+                        if (typeof packet.data.filter.start !== "undefined") start = toolbox.moment(packet.data.filter.start, "YYYYMMDD");
+                        else {
+                            start = toolbox.moment();
+                        }
+                        console.log("start===> ", start);
+                        if (!start.isValid())  start = toolbox.moment();
+                        if (typeof packet.data.filter.end !== "undefined") end =  toolbox.moment(packet.data.filter.end, "YYYYMMDD");
+                        else {
+                            end = start;
+                        }
+                        if (!end.isValid()) end = start;
+                        start = start.format("YYYYMMDD");
+                        end = end.format("YYYYMMDD");
+                        if (typeof packet.data.filter.units !== "undefined" && Array.isArray(packet.data.filter.units) && packet.data.filter.units.length > 0) units = packet.data.filter.units;
+                        if (typeof packet.data.filter.status !== "undefined" && Array.isArray(packet.data.filter.status) && packet.data.filter.status.length > 0) statuses = packet.data.filter.statuses;
+                        if (typeof packet.data.filter.search !== "undefined" && packet.data.filter.search != "")  search = packet.data.filter.search.toLowerCase();
+                        if (typeof packet.data.filter.table !== "undefined") {
+                            if (tables.indexOf(packet.data.filter.table) != -1) table = packet.data.filter.table;
+                        }
+                    }
+                    // if (typeof packet.data.filter === "undefined" || typeof packet.data.filter.start === "undefined") {
+                    //     start = toolbox.moment().format('YYYYMMDD');
+                    //     end = start;
+                    //     packet.data.filter = {};
+                    // } else {
+                    //     if (typeof packet.data.filter.start !== "undefined") start = toolbox.moment(packet.data.filter.start, "YYYYMMDD");
+                    //     console.log("start===> ", start);
+                    //     if (!start.isValid())  start = toolbox.moment().format('YYYYMMDD');
+                    //     if (typeof packet.data.filter.end !== "undefined") end =  toolbox.moment(packet.data.filter.end, "YYYYMMDD");
+                    //     if (!end.isValid()) end = start;
+                    //     start = start.format("YYYYMMDD");
+                    //     end = end.format("YYYYMMDD");
+                    //     if (typeof packet.data.filter.units !== "undefined" && Array.isArray(packet.data.filter.units) && packet.data.filter.units.length > 0) units = packet.data.filter.units;
+                    //     if (typeof packet.data.filter.status !== "undefined" && Array.isArray(packet.data.filter.status) && packet.data.filter.status.length > 0) statuses = packet.data.filter.statuses;
+                    //     if (typeof packet.data.filter.search !== "undefined" && packet.data.filter.search != "")  search = packet.data.filter.search;
+                    // }
+                    obj.start = start; obj.end = end;
+                    if (typeof packet.data.base !== "undefined") obj.base = packet.data.base;
+                    else obj.errs.push("Вы не указали базу");
+
+
+                    if (obj.errs.length == 0) {
+                        // схема по умолчанию
+                        let schema = [
+                            {name: "id", len: 10, title: "ID", type: "number", unique: true },
+                            {name: "status", len: 5, title: "Статус", type: "number", foreignKey: 'dex_document_statuses.uid', unique: false },
+                            {name: "unitid", len: 10, title: "Отделение", type: "number", foreignKey: 'stores.dex_uid', unique: false },
+                            {name: "digest", len: 100, title: "Описание", type: "string", unique: false },
+                            // {name: "docid", len: 100, title: "Тип документа", type: "string", unique: false },
+                            {name: "jdocdate", len: 100, title: "Дата документа", type: "date", unique: false }
+                        ];
+                        let schemaData = [];
+                        let sqlRequest = "SELECT ";
+                        let arr = [];
+                        schema.map(item=> arr.push(item.name));
+                        sqlRequest += arr.join(",");
+
+                        let dicts = core.DictsByNamesV1(["dex_visible_fields", "dex_data_fields"]);
+                        let dvf = dicts.find(item=> item.name == "dex_visible_fields");
+                        let dex_fields = dicts.find(item=> item.name == "dex_data_fields");
+                        let record = dvf.list.find(item=> item.author == user.UserId && item.operator == this.#operator);
+                        // console.log("record=======> ", record);
+                        if (typeof record !== "undefined") {
+                            // console.log("record=> ", record);
+
+                            sqlRequest += ",data";
+                            arr = record.flds.split(",");
+                            for (let i = 0; i < arr.length; i++) {
+                                let sc = {name: arr[i], len: 100, title: arr[i], type: "string", unique: true};
+                                let tle = dex_fields.list.find(item=> item.uid == arr[i]);
+                                if (typeof tle !== "undefined") { 
+                                    sc.title = tle.title;
+                                    if (tle.dict != "") { 
+                                        sc.foreignKey = `${tle.dict}.id`;
+                                        sc.type = "number";
+                                    }
+                                }
+                                schemaData.push(sc);
+                            }
+                        }
+                        sqlRequest += ` FROM ${table}`;
+                        sqlRequest += ` WHERE jdocdate >= '${start}000000000' AND jdocdate <= '${end}235959999'`;
+                        if (units.length > 0) sqlString +=  ` AND unitid IN (${units.join(',')})`;
+                        if (statuses.length > 0) sqlString +=  ` AND statuses IN (${statuses.join(',')})`;
+                        if (search != "") sqlRequest += ` AND data LIKE '%${search}%'`;
+                        let rows = await toolbox.sqlRequest(base, sqlRequest);
+                        if (schemaData.length > 0) {
+                            let newRow = [];
+                            for (let i = 0; i < rows.length; i++) {
+                                let row = {};
+                                for (let j = 0; j < schema.length; j++) row[schema[j].name] = rows[i][schema[j].name];
+
+                                let data =  await toolbox.xmlToJs(rows[i].data);
+                                // console.log("data=> ", data)
+                                for (let j = 0; j < schemaData.length; j++) { 
+                                    if (typeof data.Document[schemaData[j].name] !== "undefined") { 
+                                        // console.log("data.Document[schemaData[j].name]=> ", data.Document[schemaData[j].name]);
+                                        if (typeof data.Document[schemaData[j].name] !== "undefined" && typeof data.Document[schemaData[j].name][0] !== "undefined" && typeof data.Document[schemaData[j].name][0] === "string") {
+                                            // console.log("schemaData[j]==> ", schemaData[j]);
+                                            if (schemaData[j].type == "string") row[schemaData[j].name] =  data.Document[schemaData[j].name][0];
+                                            else if (schemaData[j].type == "number") { 
+                                                // console.log("преобразуем в число");
+                                                row[schemaData[j].name] =  parseInt(data.Document[schemaData[j].name][0]);
+                                            }
+                                        } else if (typeof data.Document[schemaData[j].name] !== "undefined" && typeof data.Document[schemaData[j].name][0] !== "undefined" && typeof data.Document[schemaData[j].name][0] === "object") {
+                                            if (typeof data.Document[schemaData[j].name][0]._ !== "undefined")  row[schemaData[j].name] = data.Document[schemaData[j].name][0]._;
+                                            
+                                        }   
+                                    }
+                                }
+
+                                newRow.push(row);
+                            }
+                            obj.list = newRow;
+                            schema = schema.concat(schemaData);
+                        } else {
+                            obj.list = rows;
+                        }
+                        obj.schema = schema;
+
+
+
+
+
+
+
+                        // sqlRequest = "SELECT ";
+                        // arr = [];
+                        // schema.map(item=> arr.push(item.name));
+                        // sqlRequest += arr.join(",");
+
+                        // // проверить, есть ли для пользователя и этой базы запись в справочнике видимых полей
+                        // let flds = await toolbox.sqlRequest('skyline1', `
+                        //     SELECT * FROM dict_dex_visible_fields 
+                        //     WHERE author = '${user.UserId}' AND operator = '${this.#operator}'
+                        // `);
+                            
+                        // console.log("Есть запись! ", flds);
+
+                        // if (flds.length > 0) sqlRequest = sqlRequest.concat(", data");
+                        // sqlRequest += " FROM journal";
+                        // sqlRequest += ` WHERE jdocdate > '${start}000000000' AND jdocdate < '${end}235959999'`;
+                        // if (units.length > 0) sqlString +=  ` AND unitid IN (${units.join(',')})`;
+                        // if (statuses.length > 0) sqlString +=  ` AND statuses IN (${statuses.join(',')})`;
+                        // rows = await toolbox.sqlRequest(base, sqlRequest);
+
+                        // if (flds.length > 0) {
+                        //     let data =  await toolbox.xmlToJs(row.data);
+                        //     let arr = flds[0].flds.aplit(",");
+                        //     let dicts = core.DictsByNamesV1("dex_visible_fields");
+                        //     let dict = dicts.find(item=> item.name == 'dex_visible_fields');
+                        //     for (let i = 0; arr.length; i++) {
+                        //         schema.push({name: arr[i]});
+                        //     }
+                        // } else {
+                        //     obj.list = rows;
+                        //     obj.schema = schema;
+                        // }
+                        obj.status = 1;
+
+
+                        // теперь добавим в схему поля
+                            // let rows = await toolbox.sqlRequest('skyline1', `
+                            //  SELECT uid, title 
+                            //  FROM dict_dex_data_fields
+                            //  WHERE uid IN (${flds.flds})
+                            // `);
+                            
+                    }
+                }
+
+            } else obj.errs.push("Параметр subaction обязателен!");
+        }
         return obj;
     }
     async dicts(packet, toolbox, base, user) {
@@ -563,6 +766,9 @@ class AdapterMegafonApi {
             obj.err = err;
             obj.err.push(toolbox.formatingExc(e));
         }
+        if (err.length > 0) obj.err = err;
+        else obj.status = 1;
+        console.log("obj=> ", obj);
 		return obj;
 	}
     async hooks(packet, toolbox, base, user, adapter) {
@@ -582,6 +788,7 @@ class AdapterMegafonApi {
                     let prt = await this.printForm(packet, toolbox, base, user);
                     obj.link = prt.link;
                     obj.base = packet.data.base;
+                    obj.status = prt.status;
                     // console.log("prt=> ", prt);
                 } else {
                     err.push('Вы не указали документы, которые следует распечатать');
@@ -596,6 +803,352 @@ class AdapterMegafonApi {
         if (err.length > 0) obj.err = err;
         return obj;
     }
+
+     async reports(packet, toolbox, base, user, adapter, schemas, dicts, core) {
+        let obj = {status: -1, errs: [], list: [], schema: []};
+        let userConfiguration = this.#ValidateUser( user );
+        if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+        else {
+            if (typeof packet.data.subaction !== "undefined") {
+                // отчет по долгам
+                if (typeof packet.data.base !== "undefined") {
+                    obj.base = packet.data.base;
+                    let dicts = core.DictsByNamesV1(["stores"]);
+                    let dictUnits = dicts.find(item=> item.name == "stores");
+                    if (packet.data.subaction == "dutyDocs") {
+                        let start, end, units = "";
+                        if (typeof packet.data.filter === "undefined") obj.errs.push("Вы не указали фильтр");
+                        else {
+                            let moment = toolbox.getMoment();
+                            if (typeof packet.data.filter.start === "undefined") obj.errs.push("Вы не указали дату начала периода");
+                            else {
+                                start = toolbox.moment(packet.data.filter.start, "YYYYMMDD");
+                            }
+                            if (typeof packet.data.filter.end === "undefined") obj.errs.push("Вы не указали дату окончания периода");
+                            else {
+                                end = toolbox.moment(packet.data.filter.end, "YYYYMMDD");
+                            }
+                            if (start.isValid() && end.isValid()) {
+                               
+                                let sql = `SELECT * FROM journal WHERE jdocdate >= '${start.format("YYYYMMDD")}000000000' AND jdocdate <= '${end.format("YYYYMMDD")}235959999'`;
+                                if (typeof packet.data.filter.unit !== "undefined") {
+                                    sql = `${sql} AND unitid = '${packet.data.filter.unit}'`;
+                                }
+                                console.log("sql=> ", sql);
+                                let rows = await toolbox.sqlRequest(base, sql);
+                                // console.log("rows=> ", rows);
+                                // схема
+                                obj.schema = [
+                                    {name: 'date', type: 'date', title: 'Дата'},
+                                    {name: 'fio', type: 'string', title: 'ФИО'},
+                                    {name: 'msisdn', type: 'string', title: 'MSISDN'},
+                                    {name: 'icc', type: 'string', title: 'ICC'},
+                                    {name: 'unit_new', type: 'string', title: 'Действующее отделение'},
+                                    {name: 'unit_old', type: 'string', title: 'Предыдущее отделение'}
+                                ];
+                                if (rows.length > 0) {
+                                    // let moment = toolbox.getMoment();
+                                    
+                                    for (let i = 0; i < rows.length; i++) {
+                                        let data =  await toolbox.xmlToJs(rows[i].data);
+                                        if (typeof data.Document.DutyId !== "undefined") {
+                                            let item = {};
+                                            let date = moment(rows[i].jdocdate, "YYYYMMDD");
+                                            item.date = date.format("DD.MM.YYYY");
+                                            item.fio = `${data.Document.LastName[0]} ${data.Document.FirstName} ${data.Document.SecondName}`;
+                                            item.msisdn = data.Document.MSISDN[0];
+                                            item.icc = data.Document.ICC[0];
+                                            let unit_new = dictUnits.list.find(itm=> itm.dex_uid == rows[i].unitid);
+                                            if (typeof unit_new !== "undefined") item.unit_new = unit_new.title;
+                                            else if ( typeof rows[i].unitid !== "undefined") item.unit_new = rows[i].unitid;
+                                            else item.unit_new = "";
+                                            let unitOld = dictUnits.list.find(itm=> itm.dex_uid == data.Document.DutyId[0]);
+                                            if (typeof unitOld !== "undefined") item.unit_old = unitOld.title;
+                                            else if (typeof data.Document.DutyId[0] !== "undefined") item.unit_old = data.Document.DutyId[0];
+                                            else item.unit_old = "";
+                                            obj.list.push(item);
+                                        }
+                                    }
+
+                                    
+
+                                } 
+                                
+                            }
+                        }
+                    } else if (packet.data.subaction == "sverka") {
+                        let jparams = ["journal", "archive", "journalAndArchive"];
+                        let jtypes = ["cnts", "tp", "regs", "balances"];
+                        let start, end, reportType = "cnt", journalParams = "journal", splitMonthly = false, zeroBalances = false;
+                        if (typeof packet.data.filter === "undefined") obj.errs.push("Вы не указали фильтр");
+                        else {
+                            let moment = toolbox.getMoment();
+                            if (typeof packet.data.filter.start === "undefined") obj.errs.push("Вы не указали дату начала периода");
+                            else {
+                                start = toolbox.moment(packet.data.filter.start, "YYYYMMDD");
+                            }
+                            if (typeof packet.data.filter.end === "undefined") obj.errs.push("Вы не указали дату окончания периода");
+                            else {
+                                end = toolbox.moment(packet.data.filter.end, "YYYYMMDD");
+                            }
+                            if (start.isValid() && end.isValid()) {
+                                
+                                if (typeof packet.data.filter.reportType !== "undefined" && jtypes.indexOf(packet.data.filter.reportType) != -1) reportType = packet.data.filter.reportType
+                                if (typeof packet.data.filter.journalParams !== "undefined" && jparams.indexOf(packet.data.filter.journalParams) != -1) journalParams = packet.data.filter.journalParams;
+                                if (typeof packet.data.filter.splitMonthly === "boolean") splitMonthly = packet.data.filter.splitMonthly;
+                                if (typeof packet.data.filter.zeroBalances === "boolean") zeroBalances = packet.data.filter.zeroBalances;
+
+                                obj.schema.push({name: 'unit', type: 'string', title: 'Отделение'});
+                                // obj.schema.push({name: 'region', type: 'string', title: 'Адрес точки'});
+                                // if (!splitMonthly) schema.push({name: 'month', type: 'string', title: 'Отделение'});
+                                obj.schema.push({name: 'cnt', type: 'number', title: 'Всего'});
+                                obj.reportType = reportType;
+                                obj.journalParams = journalParams;
+                                obj.start = start.format("YYYYMMDD");
+                                obj.end = end.format("YYYYMMDD");
+                                obj.splitMonthly = splitMonthly;
+                                obj.total = 0;
+                                let jp = {
+                                    journal: ["journal"],
+                                    archive: ["archive"],
+                                    journalAndArchive: ["journal", "archive"]
+                                };
+                                let newrows = [];
+                                let months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                                for (let i = 0; i < jp[journalParams].length; i++) {
+                                    let sql = `SELECT ${jp[journalParams][i]}.*, units.region FROM ${jp[journalParams][i]} 
+                                                LEFT JOIN units ON ${jp[journalParams][i]}.unitid = units.uid
+                                                WHERE ${jp[journalParams][i]}.jdocdate >= '${start.format("YYYYMMDD")}000000000'
+                                                AND ${jp[journalParams][i]}.jdocdate <= '${end.format("YYYYMMDD")}235959999'`;
+                                    let rows = await toolbox.sqlRequest(base, sql);
+                                    obj.total += rows.length;
+                                    for (let j = 0; j < rows.length; j++) {
+                                        let data =  await toolbox.xmlToJs(rows[j].data);
+                                        let elem = newrows.find(item=> item.unit == rows[j].unitid);
+
+                                        // всего
+                                        if (typeof elem !== "undefined") elem.cnt++;    
+                                        else { 
+                                            elem = {unit: rows[j].unitid, region: rows[j].region, cnt: 1};
+                                            newrows.push(elem);
+                                        }
+
+                                        if (splitMonthly) {
+                                            let jd = toolbox.moment(rows[j].jdocdate, "YYYYMMDD");
+                                            let year = jd.format("YYYY");
+                                            let month = jd.format("MM");
+                                            let name = `${months[parseInt(month - 1)]} ${year}`;
+                                            let m = obj.schema.find(item=> item.name == name);
+                                            if (typeof m === "undefined") obj.schema.push({name: name, type: "number", title: name});
+                                            if (typeof elem[name] === "undefined") elem[name] = 1;
+                                            else elem[name]++;
+                                        } else {
+                                            //теперь проверим параметры
+                                            if (reportType == "tp") {
+                                                let docTp;
+                                                if (typeof data.Document.Plan === "undefined") docTp = "ТП не указан";
+                                                else docTp = data.Document.Plan[0];                                                
+                                                if (typeof elem[docTp] === "undefined") { 
+                                                    elem[docTp] = 1;
+                                                    let tpInSchema = obj.schema.find(item=> item.name == docTp);
+                                                    if (typeof tpInSchema === "undefined") obj.schema.push({name: docTp, type: "number", title: docTp});
+                                                } else elem[docTp]++;
+                                            } else if (reportType == "regs") {
+                                                let region;
+                                                let rw = await toolbox.sqlRequest(base, `SELECT region_id FROM um_data WHERE msisdn = '${data.Document.MSISDN[0]}'`);
+                                                if (rw.length == 0) rw = await toolbox.sqlRequest(base, `SELECT region_id FROM um_data_out WHERE msisdn = '${data.Document.MSISDN[0]}'`);
+                                                if (rw.length == 0) region = "SIM-карта не найдена в справочнике";
+                                                else region = rw[0].region_id;
+
+                                                if (typeof elem[region] === "undefined") {
+                                                    elem[region] = 1;
+                                                    let regionSchema = obj.schema.find(item=> item.name == region);
+                                                    if (typeof regionSchema === "undefined") obj.schema.push({name: region, type: "number", title: region});
+                                                } else elem[region]++;
+                                            } else if (reportType == "balances") {
+                                                let balance;
+                                                let rw = await toolbox.sqlRequest(base, `SELECT balance FROM um_data WHERE msisdn = '${data.Document.MSISDN[0]}'`);
+                                                if (rw.length == 0) rw = await toolbox.sqlRequest(base, `SELECT balance FROM um_data_out WHERE msisdn = '${data.Document.MSISDN[0]}'`);
+                                                if (rw.length == 0) balance = "SIM-карта не найдена в справочнике";
+                                                else balance = rw[0].balance;
+
+                                                if (typeof elem[balance] === "undefined") {
+                                                    elem[balance] = 1;
+                                                    let balanceSchema = obj.schema.find(item=> item.name == balance);
+                                                    if (typeof balanceSchema === "undefined") obj.schema.push({name: balance, type: "number", title: balance});
+                                                } else elem[balance]++;
+                                            }
+                                        }
+                                    }
+                                }
+                                obj.list = newrows;
+                            }
+                        }
+                    } else if (packet.data.subaction == "leftovers") {
+                        let onlyActive = false, onlyMinimum = false, showAddress = false, minimum = 5, unit = -1;
+                         if (typeof packet.data.filter === "undefined") obj.errs.push("Вы не указали фильтр");
+                        else {
+                            if (typeof packet.data.filter.onlyActive === "boolean") onlyActive = packet.data.filter.onlyActive;
+                            if (typeof packet.data.filter.onlyMinimum === "boolean") { 
+                                onlyMinimum = packet.data.filter.onlyMinimum;
+                                if (onlyMinimum && typeof packet.data.filter.minimum !== "undefined") minimum = packet.data.filter.minimum;
+                            }
+                            if (typeof packet.data.filter.showAddress === "boolean") showAddress = packet.data.filter.showAddress;
+                            if (typeof packet.data.filter.unit !== "undefined") unit = packet.data.filter.unit;
+
+                            obj.schema = [
+                                {name: 'unit', type: 'string', title: 'Отделение'},
+                                {name: 'status', type: 'string', title: 'Активность'}
+                            ]
+
+                            let sqlUnits = `SELECT uid, title, status`;
+                            if (showAddress) { 
+                                obj.schema.push({name: 'region', type: 'string', title: 'Адрес точки'});
+                                sqlUnits += ", region";
+                            }
+                            obj.schema.push({name: 'cnt', type: 'number', title: 'Остаток SIM-карт'});
+                            sqlUnits += " FROM units";
+
+                            let where = [];
+                            if (onlyActive) where.push("status = '1'");
+                            if (unit != -1) where.push(`uid = '${unit}'`);
+                            if (where.length > 0) sqlUnits += ` WHERE ${where.join(" AND ")}`;
+
+                            // получим отделения
+                            let unitsRows = await toolbox.sqlRequest(base, sqlUnits);
+                            // console.log("unitsRows=> ", unitsRows);
+                            // получим симки
+                            let umDataRows = await toolbox.sqlRequest(base, `SELECT owner_id FROM um_data WHERE status = '1' AND date_sold = ''`);
+                            // console.log("umDataRows=> ", umDataRows);
+
+                            let newrows = [];
+                            for (let i = 0; i < unitsRows.length; i++) {
+                                let arr = [];
+                                for (let j = 0; j < umDataRows.length; j++) {
+                                    if (unitsRows[i].uid == umDataRows[j].owner_id) arr.push(umDataRows[j]);
+                                }
+                                if (!onlyMinimum || onlyMinimum && arr.length < minimum) {
+                                    let elem = {unit: unitsRows[i].uid, status: unitsRows[i].status, cnt: arr.length};
+                                    if (showAddress) elem.region = unitsRows[i].region;
+                                    newrows.push(elem);
+                                }
+                            }
+
+
+                            for (let i = 0; i < newrows.length; i++) {
+                                let tUnit = dictUnits.list.find(item=> item.dex_uid == newrows[i].unit);
+                                if (typeof tUnit !== "undefined") newrows[i].unit = tUnit.title;
+                                if (newrows[i].status == 1) newrows[i].status = "Отделение активно";
+                                else newrows[i].status = "Отделение заблокировано";
+                            }
+
+                            obj.list = newrows;
+                        }
+                    } else if (packet.data.subaction == "subdealerSales") {
+                        let start, end, units = "";
+                        if (typeof packet.data.filter === "undefined") obj.errs.push("Вы не указали фильтр");
+                        else {
+                            let moment = toolbox.getMoment();
+                            if (typeof packet.data.filter.start === "undefined") obj.errs.push("Вы не указали дату начала периода");
+                            else {
+                                start = toolbox.moment(packet.data.filter.start, "YYYYMMDD");
+                            }
+                            if (typeof packet.data.filter.end === "undefined") obj.errs.push("Вы не указали дату окончания периода");
+                            else {
+                                end = toolbox.moment(packet.data.filter.end, "YYYYMMDD");
+                            }
+                            if (start.isValid() && end.isValid()) {
+                                obj.schema = [];
+                                obj.total = 0;
+                                let newrows = {};
+                                let months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+                                let journals = ['journal', 'archive'];
+
+                                for (let j = 0; j < journals.length; j++) {
+                                    let rows = await toolbox.sqlRequest(base, `
+                                        SELECT * 
+                                        FROM ${journals[j]} 
+                                        WHERE jdocdate >= '${start.format("YYYYMMDD")}000000000' AND jdocdate <= '${end.format("YYYYMMDD")}235959999' AND status = '4'
+                                    `);   
+                                    for (let i = 0; i < rows.length; i++) {
+                                        let jd = toolbox.moment(rows[i].jdocdate, "YYYYMMDD");
+                                        let year = jd.format("YYYY");
+                                        let month = jd.format("MM");
+                                        let name = `${months[parseInt(month - 1)]} ${year}`;
+                                        let m = obj.schema.find(item=> item.name == name);
+                                        if (typeof m === "undefined") obj.schema.push({name: name, type: "number", title: name});
+                                        if (typeof newrows[name] !== "undefined") newrows[name]++;    
+                                        else  newrows[name] = 1;
+                                        obj.total++;
+
+                                    }
+                                }
+                                
+                                obj.list = newrows;
+                            }
+                        }
+                    } else if (packet.data.subaction == "activation") {
+                        let showPartyNum = false, showBalance = false, showUserData = false, journalParams = "journal"; 
+                        let jparams = ["journal", "archive", "journalAndArchive"];
+                        if (typeof packet.data.filter === "undefined") obj.errs.push("Вы не указали фильтр");
+                        else {
+                            if (typeof packet.data.filter.showPartyNum === "boolean" ) showPartyNum = packet.data.filter.showPartyNum;
+                            if (typeof packet.data.filter.showBalance === "boolean" ) showBalance = packet.data.filter.showBalance;
+                            if (typeof packet.data.filter.showUserData === "boolean" ) showUserData = packet.data.filter.showUserData;
+                            if (typeof packet.data.filter.journalParams !== "undefined" && jparams.indexOf(packet.data.filter.journalParams) != -1) journalParams = packet.data.filter.journalParams;
+                            else obj.errs.push("Вы указали не верные параметры журнала");
+                            if (typeof packet.data.filter.sims !== "undefined" && Array.isArray(packet.data.filter.sims)) journalParams = packet.data.filter.journalParams;
+                            else obj.errs.push("Вы не указали данные для сверки");
+
+                            if (obj.errs.length == 0) {
+                                
+                            }
+                        }
+                    }
+                   
+                    if (obj.errs.length == 0) {
+                        // сформируем excel файл
+                        obj.status  = 1;
+                        let excel = toolbox.getExcel;
+                        var workbook = new excel.Workbook();
+                        var worksheet = workbook.addWorksheet('Sheet 1');
+                        var style = workbook.createStyle({
+                          font: {
+                            // color: '#FF0800',
+                            size: 12
+                          },
+                          // numberFormat: '$#,##0.00; ($#,##0.00); -'
+                        });
+
+                        for (let i = 0; i < obj.schema.length; i++) {
+                            worksheet.cell(1, i + 1).string(obj.schema[i].title);
+                        }
+
+                        for (let i = 0; i < obj.list.length; i++) {
+                            for (let j = 0; j < obj.schema.length; j++) {
+                                // console.log("obj.list[i][schema[j].name]=> ", obj.list[i][schema[j].name]);
+                                try {
+                                    if (typeof obj.list[i][obj.schema[j].name] !== "undefined" && obj.list[i][obj.schema[j].name] !== null) worksheet.cell(i + 2, j + 1).string(obj.list[i][obj.schema[j].name].toString());  
+                                    else worksheet.cell(i + 2, j + 1).string(""); 
+                                } catch(e) {
+                                    console.log("ошибка ", e);
+                                }
+                                                                         
+                            }
+                        }
+
+                        let hash = toolbox.getHash();
+                        let link = `report_${base}_${hash}.xlsx`;
+                        obj.link = link;
+                        workbook.write(`${__dirname}/temp/${link}`);
+                    } else obj.errs.push("Данная команда subaction не обслуживается");
+                   
+                } else obj.errs.push("Вы не указали базу");
+            } else obj.errs.push("Параметр subaction обязателен!");
+        }
+        return obj;
+    }
+
     async getBaseName( packet, toolbox, base, user, adapter ) {
         console.log('getBaseName');
         let obj = {};

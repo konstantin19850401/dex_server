@@ -15,6 +15,7 @@ let APP_CONNECTOR = 'mysql';
 
 class Core {
 	#coreApi;#dicts = {};#dictsList;
+	#dictsV1 = {};#dictsListV1;
 	constructor() {
 		this.testname = APP_NAME;
 		this._base = 'dex_bases';
@@ -42,6 +43,10 @@ class Core {
 		// await this.initTikers();
 		// await this.initUserControl();
 		// this.createApp = true;
+
+		//проверить наличие таблиц
+		
+
 		console.log(`\t\t========= Приложение ${this.name} запущено ======`);	
 	}
 	get name() {return APP_NAME}
@@ -50,6 +55,317 @@ class Core {
 	get picture() {return this._pic;}
 	get conname() {return APP_CONNECTOR}
 	get appRoutes() {return that.ROUTES;}
+	get tableShcemas() {
+		let schemas = [
+			{name: 'dicts_list', description: 'Справочник Список Справочников', table: 'dict_tables', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'dict', type: 'string', title: 'Справочник', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+				]
+			},
+			{name: 'flds_tables', description: 'Справочник Список полей таблиц', table: 'dict_flds_tables', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'dict', type: 'string', title: 'Справочник', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'fld', type: 'string', title: 'UID', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+				]
+			},
+			{name: 'controls', description: 'Справочник контролей', table: 'dict_controls', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'apps', description: 'Справочник приложений', table: 'dict_apps', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'app', type: 'string', title: 'Приложение', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'sex', description: 'Справочник полов', table: 'dict_sex', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'user_groups', description: 'Справочник групп пользователей', table: 'dict_user_groups', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'apps', type: 'string', title: 'Доступные приложения', sqlType: 'VARCHAR', len: 100, foreignKey: 'apps.app', multy: true, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'regions', description: 'Справочник регионов', table: 'dict_regions', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 11, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'short_title', type: 'string', title: 'Сокращенное наименование', sqlType: 'VARCHAR', len: 50, unique: false},
+					{name: 'sets_bases', type: 'number', title: 'Набор баз', sqlType: 'INT', len: 5, foreignKey: 'sets_bases.id', unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'statuses', description: 'Справочник статусов', table: 'dict_statuses', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 11, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false}
+				]
+			},
+			{name: 'dex_document_statuses', description: 'Справочник статусов для документов DEX', table: 'dict_dex_document_statuses', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 11, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'number', title: 'UID', sqlType: 'INT', len: 10, unique: true},
+					{name: 'color', type: 'number', title: 'Цвет поля', sqlType: 'INT', len: 5,  foreignKey: 'colors.id', unique: false},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'sets_bases', description: 'Справочник наборов баз для доступа', table: 'dict_sets_bases', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 11, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'bases', type: 'string', title: 'Базы', sqlType: 'VARCHAR', len: 500, foreignKey: "bases.uid", multy: true, unique: false, },
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 500, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'bases', description: 'Справочник баз', table: 'dict_bases', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 11, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'string', title: 'UID', sqlType: 'VARCHAR', len: 50, minLen: 1, unique: true},
+					{name: 'operator', type: 'string', title: 'Оператор', sqlType: 'VARCHAR', len: 50, foreignKey: "oparators.uid", unique: false},
+					{name: 'base', type: 'string', title: 'Название БД SQL', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'sqlPoolName', type: 'string', title: 'Название БД в пуле баз', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'title', type: 'string', title: 'Наименование базы', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'oparators', description: 'Справочник операторов сотовой связи', table: 'dict_operators', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 11, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'string', title: 'UID', sqlType: 'VARCHAR', len: 50, minLen: 1, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'icc_length', type: 'number', title: 'Длина ICC', sqlType: 'INT', len: 2, unique: false},
+					{name: 'msisdn_length', type: 'number', title: 'Длина MSISDN', sqlType: 'INT', len: 2, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'identity_documents', description: 'Справочник ДУЛов', table: 'dict_identity_documents', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 2, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'countries', description: 'Справочник стран', table: 'dict_countries', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'sim_types', description: 'Справочник типов SIM-карт', table: 'dict_sim_types', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'visible_fields', description: 'Справочник видимых полей справочников', table: 'dict_visible_fields', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'dict', type: 'string', title: 'Справочник', sqlType: 'VARCHAR', len: 100, foreignKey: 'dicts_list.dict', unique: true},
+					{name: 'flds', type: 'string', title: 'Набор полей', sqlType: 'VARCHAR', len: 300, foreignKey: 'flds_tables.fld', multy: true, where: {field: "dict", target: "dicts_list.dict"}, unique: false},
+					{name: 'author', type: 'string', title: 'Автор', sqlType: 'VARCHAR', len: 32, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'contractor_types', description: 'Справочник типов контрагентов', table: 'dict_contractor_types', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'short_title', type: 'string', title: 'Сокращенное наименование', sqlType: 'VARCHAR', len: 50, unique: false},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'contractors', description: 'Справочник контрагентов', table: 'dict_contractors', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'contractor_type', type: 'number', title: 'Тип контрагента', sqlType: 'INT', len: 5, foreignKey: 'contractor_types.id', unique: false},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'lastname', type: 'string', title: 'Фамилия', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'firstname', type: 'string', title: 'Имя', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'secondname', type: 'string', title: 'Отчество', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'stores', description: 'Справочник торговых точек', table: 'dict_stores', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'dex_uid', type: 'number', title: 'DEX_UID', sqlType: 'INT', len: 10, minLen: 1, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 200, unique: false},
+					{name: 'parent', type: 'number', title: 'Контрагент владелец', sqlType: 'INT', len: 10, foreignKey: 'contractors.id', unique: false},
+					{name: 'region', type: 'number', title: 'Регион расположения', sqlType: 'INT', len: 5, foreignKey: 'regions.id', unique: false},
+					{name: 'address', type: 'string', title: 'Адрес', sqlType: 'VARCHAR', len: 500, unique: false, ifAddress: true},
+					{name: 'created', type: 'string', title: 'Дата создания', sqlType: 'TIMESTAMP', len: 100, unique: false},
+					{name: 'allowed_bases', type: 'number', title: 'Набор доступных баз', sqlType: 'INT', len: 5, foreignKey: 'sets_bases.id', unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'mega_profiles', description: 'Справочник профилей МегаФон', table: 'dict_mega_profiles', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'username', type: 'string', title: 'Логин', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'password', type: 'string', title: 'Пароль', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'agent_id', type: 'string', title: 'Агентский ID', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'mega_stores', description: 'Справочник торговых точек МегаФон', table: 'dict_megafon_stores', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'megafon_code', type: 'string', title: 'Имя точки', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'megafon_sale_point_id', type: 'string', title: 'Код точки', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'dex_store', type: 'number', title: 'Торговая точка DEX', sqlType: 'INT', len: 10, foreignKey: 'stores.id', unique: false},
+					{name: 'dex_megafon_profile', type: 'number', title: 'Профиль отправки', sqlType: 'INT', len: 100, foreignKey: 'mega_profiles.id', unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'rights', description: 'Справочник прав', table: 'dict_rights', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'string', title: 'UID', sqlType: 'VARCHAR', len: 50, minLen: 1, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'sets_rights', description: 'Справочник наборы прав', table: 'dict_sets_rights', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'rights', type: 'string', title: 'Набор прав', sqlType: 'VARCHAR', len: 100, foreignKey: 'rights.uid', multy: true, unique: false},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'dex_data_fields', description: 'Справочник полей документа dex', table: 'dict_dex_data_fields', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'string', title: 'UID', sqlType: 'VARCHAR', len: 100, minLen: 3, unique: true},
+					{name: 'dict', type: 'string', title: 'Данные из справочника', sqlType: 'VARCHAR', len: 100, minLen: 3, foreignKey: 'dicts_list.dict', unique: false},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, minLen: 1, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'dex_visible_fields', description: 'Справочник видимых полей для операторов dex', table: 'dict_dex_visible_fields', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 10, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'operator', type: 'string', title: 'Оператор', sqlType: 'VARCHAR', len: 50, minLen: 1, foreignKey: 'oparators.uid', unique: false},
+					{name: 'flds', type: 'string', title: 'Набор полей', sqlType: 'VARCHAR', len: 100, foreignKey: 'dex_data_fields.uid', multy: true, unique: false},
+					{name: 'author', type: 'string', title: 'Автор', sqlType: 'VARCHAR', len: 32, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'data_types', description: 'Справочник типов данных', table: 'dict_data_types', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'string', title: 'UID', sqlType: 'VARCHAR', len: 20, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
+			{name: 'colors', description: 'Справочник цветов', table: 'dict_colors', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'code', type: 'string', title: 'Код', sqlType: 'VARCHAR', len: 20, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			}
+		];
+		return schemas;
+	}
+	get mappingSchems() {
+		let schemas = [
+			{name: 'sex', description: 'Таблица соответствий для справочника полов', fieldName: "Sex", table: 'mapping_sex', type: "mapping",
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'target', type: 'string', title: 'Поле dex', sqlType: 'VARCHAR', len: 20, unique: true},
+					{name: 'dex_dict', type: 'string', title: 'Набор значений из таблицы dex', sqlType: 'VARCHAR', len: 20, foreignKey: 'dex_data_fields.uid', multy: true, unique: false},
+					{name: 'dict', type: 'string', title: 'Значение из таблицы', sqlType: 'VARCHAR', len: 20, unique: true},
+				]
+			}
+		]
+		return schemas;
+	}
+	async checkTables() {
+		let schemas = this.tableShcemas;
+		// для начала офомим самые первые справочники, настройки
+		let rows = await this.toolbox.sqlRequest('skyline1', `SHOW TABLES FROM skyline1 LIKE 'dict_flds_tables'`);
+		if (rows.length == 0) {
+			let schema = schemas.find(item=> item.name == 'flds_tables');
+			if (typeof schema !== 'undefined') {
+				let data = [];
+				for (let j = 0; j < schema.fields.length; j++) {
+					let conf;
+					if (schema.fields[j].sqlType == "TIMESTAMP") conf = `${schema.fields[j].name} ${schema.fields[j].sqlType} NOT NULL DEFAULT CURRENT_TIMESTAMP`;
+					else conf = `${schema.fields[j].name} ${schema.fields[j].sqlType}(${schema.fields[j].len})`;
+					if (typeof schema.fields[j].autoIncrement !== 'undefined' && schema.fields[j].autoIncrement == true) conf += ` AUTO_INCREMENT`;
+					if (typeof schema.fields[j].primaryKey !== 'undefined' && schema.fields[j].primaryKey == true) conf += ` PRIMARY KEY`;
+					data.push(conf);
+				}
+				await this.toolbox.sqlRequest('skyline1', `
+					CREATE TABLE ${schema.table} ( ${data.join(',')} )
+				`);
+			}
+		}
+
+		for (let i = 0; i < schemas.length; i++) {
+			let rows = await this.toolbox.sqlRequest('skyline1', `SHOW TABLES FROM skyline1 LIKE '${schemas[i].table}'`);
+			if (rows.length == 0) {
+				// такой таблицы нет, надо создать
+				let data = [];
+				let fldsForDict = [];
+				for (let j = 0; j < schemas[i].fields.length; j++) {
+					let conf;
+					if (schemas[i].fields[j].sqlType == "TIMESTAMP") conf = `${schemas[i].fields[j].name} ${schemas[i].fields[j].sqlType} NOT NULL DEFAULT CURRENT_TIMESTAMP`;
+					else conf = `${schemas[i].fields[j].name} ${schemas[i].fields[j].sqlType}(${schemas[i].fields[j].len})`;
+					if (typeof schemas[i].fields[j].autoIncrement !== 'undefined' && schemas[i].fields[j].autoIncrement == true) conf += ` AUTO_INCREMENT`;
+					if (typeof schemas[i].fields[j].primaryKey !== 'undefined' && schemas[i].fields[j].primaryKey == true) conf += ` PRIMARY KEY`;
+					data.push(conf);
+					// запомним поле для Справочник полей справочников
+					fldsForDict.push({name: schemas[i].fields[j].name, title: schemas[i].fields[j].title});
+					
+				}
+				let sqlReq = `CREATE TABLE ${schemas[i].table} ( ${data.join(',')} )`;
+				await this.toolbox.sqlRequest('skyline1', sqlReq);
+
+				// добавим название поля в Справочник полей справочников
+				for (let j = 0; j < fldsForDict.length; j++) {
+					await this.toolbox.sqlRequest('skyline1', `
+						INSERT INTO dict_flds_tables 
+						SET dict = '${schemas[i].name}', fld = '${schemas[i].name}.${fldsForDict[j].name}', title = '${fldsForDict[j].title}'
+					`);
+				}
+				
+				// а теперь добавим справочник в справочник справочников
+				if (schemas[i].name != "dicts_list") {
+					await this.toolbox.sqlRequest('skyline1', `
+						INSERT INTO dict_tables 
+						SET dict ='${schemas[i].name}', title = '${schemas[i].description}'
+					`);
+				}
+			} else {
+				console.log(`таблица ${schemas[i].table} существует. Не создаем.`);
+			}
+		} 
+	}
 	DictsByNames(names) {
 		let dicts = [];
 		let arr = [];
@@ -57,33 +373,70 @@ class Core {
 		else if (typeof names === "string") arr.push(names);
 		if (arr.length > 0) {
 			for (let i = 0; i < arr.length; i++) {
-				if (this.#dicts[arr[i]] != "undefined") dicts.push({name: arr[i], list: Array.from(this.#dicts[arr[i]])});
+				if (this.#dicts[arr[i]] != "undefined") dicts.push({name: arr[i], description: this.#dicts[arr[i]].description, list: Array.from(this.#dicts[arr[i]].rows)});
 			}
 		}
 		return dicts;
 	}
+	DictsByNamesV1(names) {
+		let dicts = [];
+		let arr = [];
+		if (Array.isArray(names) && names.length > 0) names.map(item=> arr.push(item));
+		else if (typeof names === "string") arr.push(names);
+		if (arr.length > 0) {
+			for (let i = 0; i < arr.length; i++) {
+				if (typeof this.#dictsV1[arr[i]] !== "undefined") {
+					// так же отдадим схему справочника
+					let schema = [];
+					let schemas = this.tableShcemas;
+					for (let j = 0; j < schemas.length; j++) {
+						if (schemas[j].name == arr[i]) {
+							schemas[j].fields.map(item=> { 
+								let sch = {};
+								sch.name = item.name;
+								sch.title = item.title;
+								sch.type = item.type;
+								sch.len = item.len;
+								sch.unique = item.unique;
+								if (typeof item.multy !== 'undefined') sch.multy = item.multy
+								if (typeof item.foreignKey !== 'undefined') sch.foreignKey = item.foreignKey;
+								if (typeof item.where !== 'undefined') sch.where = item.where;
+								if (typeof item.ifAddress !== 'undefined') sch.ifAddress = item.ifAddress;
+								// if (typeof item.status !== "undefined") sch.status = item.status;
+								schema.push(sch);
+							});
+							break;
+						}
+					}
+					dicts.push({name: arr[i], description: this.#dictsV1[arr[i]].description, table: this.#dictsV1[arr[i]].table, schema: schema, list: Array.from(this.#dictsV1[arr[i]].rows)});
+				}
+			}
+		}
+		return dicts;
+	}
+
 	set connector(connector) {this._connector = connector;}
 
 	async newInitDicts() {
 		this.#dictsList = [
-			{name: "users", table: "skyline.user", flds: ["uid","username","lastname","firstname","secondname"]},
-			{name: "userGroups", table: "skyline.user_groups", flds: ["id","user_group_id","name","apps","status"]},
-			{name: "apps", table: "skyline.dict_apps", flds: ["uid","title","status"]},
-			{name: "docTypes", table: "skyline.dict_doc_types", flds: ["uid","title","status"]},
-			{name: "stores", table: "skyline.dict_stores", flds: ["uid","dex_uid","parent","lastname","firstname","secondname","title","status"]},
-			{name: "docStatuses", table: "skyline.dict_doc_statuses", flds: ["uid","eng","title","status"]},
-			{name: "statuses", table: "skyline.dict_user_statuses", flds: ["uid","title"]},
-			{name: "operators", table: "skyline.dex_dict_operators", flds: ["uid","title","icc_length","msisdn_length","status"]},
-			{name: "typesProducts", table: "skyline.dict_types_products", flds: ["uid","title","status"]},
-			{name: "stocks", table: "skyline.dict_stocks", flds: ["uid","title","status"]},
-			{name: "dexBases", table: "skyline.dex_bases", flds: ["uid","base","operator","title","status"]},
-			{name: "regions", table: "skyline.dict_regions", flds: ["uid","title","short_title","status"]},
-			{name: "balance", table: "skyline.dex_dict_balance", flds: ["uid","title","status"]},
-			{name: "simTypes", table: "skyline.dict_sim_types", flds: ["uid","title","status"]},
-			{name: "contractors", table: "skyline.contractors", flds: ["uid","title","status"]},
-			{name: "units", table: "skyline.dict_units", flds: ["uid","title","lastname","firstname","secondname","region","data","date_create","fiz_address","legal_address","status"]},
-			{name: "megafonProfiles", table: "skyline.dex_dict_megafon_dispatch_profiles", flds: ["uid","name","title","code","status"]},
-			{name: "megafonStores", table: "skyline.dex_dict_megafon_stores", flds: ["id","megafon_code","megafon_sale_point_id","dex_store","dex_megafon_profile","status"]},
+			{name: "users", description: "", table: "skyline.user", flds: ["uid","username","lastname","firstname","secondname"]},
+			{name: "userGroups", description: "", table: "skyline.user_groups", flds: ["id","user_group_id","name","apps","status"]},
+			{name: "apps", description: "", table: "skyline.dict_apps", flds: ["uid","title","status"]},
+			{name: "docTypes", description: "", table: "skyline.dict_doc_types", flds: ["uid","title","status"]},
+			{name: "stores", description: "Справочник торговых точек", table: "skyline.dict_stores", flds: ["uid","dex_uid","parent","lastname","firstname","secondname","title","status"]},
+			{name: "docStatuses", description: "", table: "skyline.dict_doc_statuses", flds: ["uid","eng","title","status"]},
+			{name: "statuses", description: "Справочник статусов", table: "skyline.dict_user_statuses", flds: ["uid","title"]},
+			{name: "operators", description: "", table: "skyline.dex_dict_operators", flds: ["uid","title","icc_length","msisdn_length","status"]},
+			{name: "typesProducts", description: "", table: "skyline.dict_types_products", flds: ["uid","title","status"]},
+			{name: "stocks", description: "", table: "skyline.dict_stocks", flds: ["uid","title","status"]},
+			{name: "dexBases", description: "", table: "skyline.dex_bases", flds: ["uid","base","operator","title","status"]},
+			{name: "regions", description: "Справочник регионов РФ", table: "skyline.dict_regions", flds: ["uid","title","short_title","status"]},
+			{name: "balance", description: "", table: "skyline.dex_dict_balance", flds: ["uid","title","status"]},
+			{name: "simTypes", description: "", table: "skyline.dict_sim_types", flds: ["uid","title","status"]},
+			{name: "contractors", description: "", table: "skyline.contractors", flds: ["uid","title","status"]},
+			{name: "units", description: "Справочник отделений", table: "skyline.dict_units", flds: ["uid","title","lastname","firstname","secondname","region","data","date_create","fiz_address","legal_address","status"]},
+			{name: "megafonProfiles", description: "", table: "skyline.dex_dict_megafon_dispatch_profiles", flds: ["uid","name","title","code","status"]},
+			{name: "megafonStores", description: "", table: "skyline.dex_dict_megafon_stores", flds: ["id","megafon_code","megafon_sale_point_id","dex_store","dex_megafon_profile","status"]},
 		];
 		for (let i = 0; i < this.#dictsList.length; i++) {
 			let data = this.#dictsList[i].table.split(".");
@@ -91,12 +444,54 @@ class Core {
 				SELECT ${this.#dictsList[i].flds.join(",")}
 				FROM ${data[1]}
 			`);
-			this.#dicts[this.#dictsList[i].name] = rows;
+			//this.#dicts[this.#dictsList[i].name] = rows;
+			this.#dicts[this.#dictsList[i].name] = {description: this.#dictsList[i].description, name: this.#dictsList[i].name, rows: rows};
+			// console.log(this.#dicts[this.#dictsList[i].name]);
 		}
 	}
+
+	async updateDictV1(dictName) {
+		let shcemas = this.tableShcemas;
+		let schema = shcemas.find(item=> item.type == "dict" && item.name == dictName);
+		let flds = [];
+		schema.fields.map(item=> flds.push(item.name));
+		let rows = await this.toolbox.sqlRequest('skyline1', `
+			SELECT ${flds.join(",")}
+			FROM ${schema.table}
+		`);
+		this.#dictsV1[schema.name] = {description: schema.description, table: schema.table, name: schema.name, rows: rows};
+	}
+	async newInitDictsV1() {
+		let shcemas = this.tableShcemas;
+		this.#dictsListV1 = [];
+		for (let i = 0; i < shcemas.length; i++) {
+			if (shcemas[i].type == 'dict') {
+				let flds = [];
+				shcemas[i].fields.map(item=> flds.push(item.name));
+				let dict = {name: shcemas[i].name, description: shcemas[i].description, table: `skyline1.${shcemas[i].table}`, flds: flds};
+				this.#dictsListV1.push(dict);
+			}
+		}
+		for (let i = 0; i < this.#dictsListV1.length; i++) {
+			let data = this.#dictsListV1[i].table.split(".");
+			let orderBy = '';
+			if (this.#dictsListV1[i].flds.indexOf('title') != -1) orderBy = ' ORDER BY title';
+			let rows = await this.toolbox.sqlRequest(data[0], `
+				SELECT ${this.#dictsListV1[i].flds.join(",")}
+				FROM ${data[1]} ${orderBy}
+			`);
+			this.#dictsV1[this.#dictsListV1[i].name] = {description: this.#dictsListV1[i].description, table: this.#dictsListV1[i].table, name: this.#dictsListV1[i].name, rows: rows};
+		}
+	}
+
 	async getNewDicts(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
 		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
 		let obj = await this.#coreApi.GetDicts( user, packet.data );
+		return obj;
+	}
+	async getNewAllDicts(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetAllDicts( user, packet.data );
 		return obj;
 	}
 	async updateNewDicts(name) {
@@ -131,10 +526,13 @@ class Core {
 		this.toolbox = new Toolbox(this._connector);
 		this.#coreApi = new CoreApi(DATA, this.toolbox, this);
 
-
+		await this.checkTables();
 		await this.newInitDicts();
+		await this.newInitDictsV1();
 	}
 	async initDictionaries() {
+		
+
 		let dicts = [
 			{id: 'countries',      table: 'dex_dict_countries'},
 			{id: 'docTypes',       table: 'dex_dict_doctypes'},
@@ -220,7 +618,8 @@ class Core {
 	}
 
 	async startingLocationApp(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
-		console.log("старт!");
+		console.log("Запрос стартовых данных приложения!");
+		/*
 		let obj = {status: -1};
 		let err = [];
 		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
@@ -279,6 +678,10 @@ class Core {
 		}
 		if (err.length > 0) obj.err = err;
 		console.log("obj==> ", obj);
+		*/	
+
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.StartingLocation( user, packet.data );
 		return obj;
 	}
 	async getAppDicts(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
@@ -1307,6 +1710,52 @@ class Core {
 		return obj;
 	}
 
+	async getDictsRecordsV1(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDictsRecordsV1( user, packet.data );
+		return obj;
+	}
+	async getDictSingleIdV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetRecordFromDictByIdV1( user, packet.data );
+		return obj;
+	}
+	async getNewAllDictsV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetAllDictsV1( user, packet.data );
+		return obj;
+	}
+	async createNewRecordInDictV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.CreateNewRecordInDictV1( user, packet.data );
+		return obj;
+	}
+	async getBasesV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetBasesV1( user, packet.data );
+		return obj;
+	}
+	async getDictSchemaV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.GetDictSchemaV1( user, packet.data );
+		return obj;
+	}
+	async delElementsFromDictV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.DeleteItemFromDictionaryV1( user, packet.data );
+		return obj;
+	}
+	async clearDictV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.ClearDictV1( user, packet.data );
+		return obj;
+	}
+	async editDictV1( packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS ) {
+		let user = AUTH_USERS.find(element=> element.Uid === packet.uid);
+		let obj = await this.#coreApi.EditDictRecordV1( user, packet.data );
+		return obj;
+	}
+
 	// главный вход для api приложения
 	async appApi(packet, AUTH_USERS, SUBSCRIBERS, AWAIT_SENDING_PACKETS) {
 		console.log("похоже будет вызов api");
@@ -1364,6 +1813,7 @@ class Core {
 					"createDocumentInStoreHouse",
 
 					"getNewDicts",
+					'getNewAllDicts',
 
 					"getDictMegafonStores",
 					"getDictMegafonStoresSingleId",
@@ -1380,7 +1830,18 @@ class Core {
 					'createNewStatus',
 
 					'getDictSingleId',
-					'getDictRecords'
+					'getDictRecords',
+
+					'getDictsRecordsV1',
+					'getDictSingleIdV1',
+					'getNewAllDictsV1',
+					'createNewRecordInDictV1',
+					"getBasesV1",
+					"getDictSchemaV1",
+					"delElementsFromDictV1",
+					"clearDictV1",
+					"editDictV1"
+
 
 				];
 

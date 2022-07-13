@@ -15,6 +15,7 @@ const PizZip = require("pizzip");
 const Docxtemplater = require("docxtemplater");
 const path = require('path');
 const docxMerger = require('docx-merger');
+const excel = require('excel4node');
 
 class Toolbox {
 	constructor(connector) {
@@ -587,6 +588,10 @@ class Toolbox {
         }
         return str;
     }
+    // проверка на число
+    isNumber(num) {
+        return typeof num === 'number' && !isNaN(num);
+    }
     // преобразование первого символа в строчный
     toUpperCaseFirst(value) {
         if (value.length > 0) return value.charAt(0).toUpperCase() + value.slice(1);
@@ -799,6 +804,7 @@ class Toolbox {
     getCSVWriter() {
         return csvWriter;
     }
+    get getExcel() {return excel; }
     // работа с doc pizZip
     get pizZip() {
         return PizZip;
@@ -820,6 +826,15 @@ class Toolbox {
     get rootPath() {
         return __dirname;
     } 
+    async asyncLoop(o) {
+        let i=-1;
+        let loop = () => {
+            i++;
+            if(i==o.length){o.callback(); return;}
+            o.functionToLoop(loop, i);
+        } 
+        loop();
+    }
 }
 
 module.exports = Toolbox;

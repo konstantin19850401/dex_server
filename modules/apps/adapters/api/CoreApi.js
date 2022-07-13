@@ -22,7 +22,7 @@ class CoreApi extends Api {
 	// ПУБЛИЧНЫЕ МЕТОДЫ
 	StartingLocation( user, data ) {
 		console.log(`запрос StartingLocation для appid = ${this.#appid}`);
-		let obj = {status: -1, bases: [], errs: []};
+		let obj = {status: -1, bases: [], errs: [], dicts: []};
 		let userConfiguration = user.GetAppConfiguration(this.#appid);
 		if ( typeof userConfiguration !== 'undefined' ) {
 			let bases = userConfiguration.configuration.bases;
@@ -38,7 +38,19 @@ class CoreApi extends Api {
 						}
 					}
 				}
-			})
+			});
+			// if (obj.status == 1) {
+			// 	// ну до кучи запихнем еще и справочники
+			// 	let dicts = this.#core.DictsByNames([
+			// 		"units", "regions", "stores", "statuses"
+			// 	]);
+			// 	if (dicts.length > 0) {
+			// 		for (let i = 0; i < dicts.length; i++) {
+			// 			obj.dicts.push({name: dicts[i].name, description: dicts[i].description, list: dicts[i].list});
+			// 		}
+			// 	}
+			// }
+			
 		} else obj.errs.push(`У пользователя ${user.UserName} не найдена конфигурация для приложения ${this.#appid}`);
 		return obj;
 	}
@@ -60,7 +72,25 @@ class CoreApi extends Api {
 		}
 		return obj;
 	}
-	
+	GetAllDicts( user, data ) {
+		console.log(`запрос GetAllDicts для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let dicts = this.#core.DictsByNames([
+				"units", "regions", "stores", "statuses"
+			]);
+			if (dicts.length > 0) {
+				for (let i = 0; i < dicts.length; i++) {
+					obj.list.push({name: dicts[i].name, description: dicts[i].description, list: dicts[i].list});
+				}
+				obj.status = 1;
+			}
+		}
+		return obj;
+	}
+
 	// универсальное удаление записи из справочника по id записи
 	async DeleteItemFromDictionary( user, data ) {
 		console.log(`запрос DeleteItemFromDictionary для appid = ${this.#appid}`);
@@ -137,6 +167,64 @@ class CoreApi extends Api {
 		}
 		return obj;
 	}
+
+	// очищение справочника 
+	async ClearDictV1( user, data ) {
+		console.log(`запрос ClearDictV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], deleted: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			else {
+				let dicts = this.#core.DictsByNamesV1(data.dict);
+				let dict = dicts.find(item => item.name == data.dict);
+				if (typeof dict === 'undefined') obj.errs.push('Указанный вами справочник не существует');
+				else {
+					await this.Toolbox.sqlRequest('skyline1', `
+						TRUNCATE ${dict.table}
+					`);
+					obj.dict = data.dict;
+					obj.status = 1;
+					// обновить справочник
+					this.#core.updateDictV1(data.dict);
+				}
+			}
+		}
+		return obj;
+	}
+	// универсальное удаление записи из справочника по id записи
+	async DeleteItemFromDictionaryV1( user, data ) {
+		console.log(`запрос DeleteItemFromDictionaryV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], deleted: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			if (typeof data.list === 'undefined') obj.errs.push('Поле list обязательно для заполнения');
+			if (obj.errs.length == 0) {
+				if (Array.isArray(data.list) && data.list.length > 0) {
+					let dicts = this.#core.DictsByNamesV1(data.dict);
+					let dict = dicts.find(item => item.name == data.dict);
+					if (typeof dict === 'undefined') obj.errs.push('Указанный вами справочник не существует');
+					else {
+						let els = [];
+						data.list.map(item=> els.push(`'${item}'`));
+						await this.Toolbox.sqlRequest('skyline1', `
+							DELETE FROM ${dict.table} 
+							WHERE id IN (${els.join(',')})
+						`);
+						obj.dict = data.dict;
+						obj.deleted = els;
+						obj.status = 1;
+						// обновить справочник
+						this.#core.updateDictV1(data.dict);
+					}
+				} else obj.errs.push('Вы не указали что удалять');
+			}
+		}
+		return obj;
+	}	
 	// универсальный запрос записи из справочника по id записи
 	async GetRecordFromDictById( user, data ) {
 		console.log(`запрос GetRecordFromDictById для appid = ${this.#appid}`);
@@ -148,8 +236,15 @@ class CoreApi extends Api {
 			if (typeof data.id === 'undefined') obj.errs.push('Вы не указали id записи');
 			if (obj.errs.length == 0) {
 				let dicts = [
-					{name: 'regions', table: 'dict_regions', byId: 'id', fields: ['id', 'uid','title','short_title','def_bases','status']},
-					{name: 'statuses', table: 'dict_user_statuses', byId: 'uid', fields: ['uid','title']},
+					{name: 'regions', table: 'dict_regions', byId: 'uid', fields: [
+						{fname: 'id', ftype: "string", allowEdit: false}, 
+						{fname: 'uid', ftype: 'string', allowEdit: true},
+						{fname: 'title', ftype: 'string', allowEdit: true},
+						{fname: 'short_title', ftype: 'string', allowEdit: true},
+						{fname: 'def_bases', ftype: 'dict', },
+						//{'status'}
+					]},
+					{name: 'statuses', table: 'dict_user_statuses', byId: 'uid', fields: ['id', 'uid','title']},
 				]
 				let dict = dicts.find(item => item.name == data.dict);
 				if (typeof dict === 'undefined') obj.errs.push('Указанный вами справочник не существует');
@@ -160,7 +255,7 @@ class CoreApi extends Api {
 						WHERE ${dict.byId} = '${data.id}'
 					`);
 					if ( rows.length > 0 ) { 
-						obj.list = rows;
+						obj.list = rows[0];
 						obj.status = 1;
 					} else obj.errs.push( 'Запрошенная вами запись не существует!' );
 				}
@@ -178,46 +273,380 @@ class CoreApi extends Api {
 			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
 			if (obj.errs.length == 0) {
 				let dicts = [
-					{name: 'regions', table: 'dict_regions', byId: 'id', fields: ['id', 'uid','title','short_title','def_bases','status'], replace: [
+					{name: 'regions', description: 'Справочник регионов', table: 'dict_regions', byId: 'uid', fields: ['id', 'uid','title','short_title','def_bases','status'], replace: [
 						{field: 'status', dict: 'statuses', id: 'uid', title: 'title'}
 					]},
-					{name: 'statuses', table: 'dict_user_statuses', byId: 'uid', fields: ['uid','title']},
+					{name: 'statuses', description: 'Справочник статусов', table: 'dict_user_statuses', byId: 'uid', fields: ['uid','title']},
+					{name: 'units', description: 'Справочник отделений', table: 'dict_units', byId: 'uid', fields: ['uid','title']},
+					{name: 'stores', description: 'Справочник торговых точек', table: 'dict_stores', byId: 'uid', fields: ['uid','title']},
 				]
 				let dict = dicts.find(item => item.name == data.dict);
 				if (typeof dict === 'undefined') obj.errs.push('Указанный вами справочник не существует');
 				else {
+					obj.dictName = dict.name;
+					obj.dictTitle = dict.description;
 					let rows = await this.Toolbox.sqlRequest('skyline', `
 						SELECT ${dict.fields.join(',')}
-						FROM ${dict.table}
+						FROM ${dict.table} 
+						ORDER BY title
 					`);
-
+					obj.status = 1;
 					if (typeof dict.replace !== 'undefined') {
-						let tdicts = [];
-						dict.replace.map(item=> tdicts.push(item.dict));
-						let dicts = this.#core.DictsByNames(tdicts);
-						let odicts = {};
-						dicts.map(item=> odicts[item.name] = item);
-						console.log(odicts);
-						for (let i = 0; i <rows.length; i++) {
-							for (let j = 0; j < dict.replace.length; j++) {
-								let d = odicts[dict.replace[j].dict];
-								
-								let dd = d.list.find(item => item[dict.replace[j].id] == rows[i][dict.replace[j].id]);
-								console.log("dd=> ", dd);
-								if (typeof dd !== 'undefined') rows[i][dict.replace[j].id] = dd[dict.replace[j].title]
+						let repl = {};
+						for (let i = 0; i < dict.replace.length; i++) { 
+							repl[dict.replace[i].field] = {};
+							let repDictList = this.#core.DictsByNames([dict.replace[i].dict]);
+							let repDict = repDictList.find(item=> item.name == dict.replace[i].dict);
+							repl[dict.replace[i].field] = { list: repDict.list, id: dict.replace[i].id, title: dict.replace[i].title};
+						}
+						for (let i = 0; i < rows.length; i++) {
+							for (let key in rows[i]) {
+								if (typeof repl[key] !== 'undefined') {
+									let item = repl[key].list.find(item=> item[repl[key].id] == rows[i][key]);
+									if (typeof item !== 'undefined') {
+										rows[i][key] = item.title;
+									}
+								}
 							}
 						}
+
+						// let tdicts = [];
+						// dict.replace.map(item=> tdicts.push(item.dict));
+						// let dicts = this.#core.DictsByNames(tdicts);
+						// let odicts = {};
+						// dicts.map(item=> odicts[item.name] = item);
+						// console.log(odicts);
+						// for (let i = 0; i <rows.length; i++) {
+						// 	for (let j = 0; j < dict.replace.length; j++) {
+						// 		let d = odicts[dict.replace[j].dict];
+						// 		let dd = d.list.find(item => item[dict.replace[j].id] == rows[i][dict.replace[j].id]);
+						// 		console.log("dd=> ", dd);
+						// 		if (typeof dd !== 'undefined') rows[i][dict.replace[j].id] = dd[dict.replace[j].title]
+						// 	}
+						// }
+						obj.list = rows;
 					} else {
 						obj.list = rows;
-					}
-
-					
+					}					
 					obj.status = 1;
 				}
 			}
 		}
 		return obj;
 	}
+
+
+	// универсальный запрос справочников по их названию v1
+	async GetDictsRecordsV1(  user, data  ) {
+		console.log(`запрос GetDictRecordsV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			if (obj.errs.length == 0) {
+				let dcts = data.dict.split(',');
+				let dicts = this.#core.DictsByNamesV1(dcts);
+				if (typeof dicts === 'undefined') obj.errs.push('Указанные вами справочники не существуют');
+				else {
+					let visibleDict = this.#core.DictsByNamesV1(['visible_fields']);
+					let visibleFlds = visibleDict.find(item=> item.name == 'visible_fields');
+					for (let i = 0; i < dicts.length; i++) {
+						let record = visibleFlds.list.find(item=> item.dict == dicts[i].name);
+						let list = [];
+						let schema = [];
+						if (typeof record !== 'undefined') {
+							// есть запись по видимым полям, надо бы реализовать
+							let flds = record.flds.split(',');
+							dicts[i].schema.map(item => {
+								if (item.name == "id" || item.name == "uid" || item.name == "title") schema.push(item);
+								else {
+									if (flds.indexOf(`${dicts[i].name}.${item.name}`) != -1) schema.push(item);
+								}
+							});
+							dicts[i].list.map(item=> {
+								let itm = {};
+								for (let j = 0; j < schema.length; j++) itm[schema[j].name] = item[schema[j].name];
+								list.push(itm);
+							});
+						} else {
+							list = dicts[i].list;
+							schema = dicts[i].schema;
+						}
+						obj.list.push({dictName: dicts[i].name, dictTitle: dicts[i].description, schema: schema, list: list});
+					}
+					obj.status = 1;
+				}
+			}
+		}
+		return obj;
+	}
+	async GetDictSchemaV1( user, data ) {
+		console.log(`запрос GetDictSchemaV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			if (obj.errs.length == 0) {
+				obj.dict = data.dict;
+				let dicts = this.#core.DictsByNamesV1(data.dict);
+				if (typeof dicts === 'undefined') obj.errs.push('Указанный вами справочник не существует');
+				else {
+					let dict = dicts.find(item=> item.name == data.dict);
+					let schema = dict.schema;
+					console.log("schema=> ", schema);
+					obj.status = 1;
+					obj.list = schema;
+				}
+			}
+		}
+		return obj;
+	}
+	// универсальный запрос записи из справочника по id записи
+	async GetRecordFromDictByIdV1( user, data ) {
+		console.log(`запрос GetRecordFromDictByIdV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			if (typeof data.id === 'undefined') obj.errs.push('Вы не указали id записи');
+			if (obj.errs.length == 0) {
+				let dicts = this.#core.DictsByNamesV1(data.dict);
+				let dict = dicts.find(item=> item.name == data.dict);
+				if (typeof dicts === 'undefined') obj.errs.push('Указанный вами справочник не существуют');
+				else {
+					let rows = await this.Toolbox.sqlRequest('skyline1', `
+						SELECT * FROM ${dict.table}
+						WHERE id = '${data.id}'
+					`);
+					if ( rows.length > 0 ) { 
+						obj.list = rows[0];
+						obj.status = 1;
+					} else obj.errs.push( 'Запрошенная вами запись не существует!' );
+				}
+			}
+		}
+		return obj;
+	}
+	async GetAllDictsV1( user, data ) {
+		console.log(`запрос GetAllDictsV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let dicts = this.#core.DictsByNamesV1([
+				"regions", "statuses", "sets_bases", "bases", "oparators", "identity_documents", "countries",
+				"mega_profiles","sim_types","stores","dicts_list","visible_fields","flds_tables","apps","controls","user_groups","mega_stores",
+				"contractor_types","contractors","rights","sets_rights","dex_data_fields","dex_visible_fields","sex","data_types","dex_document_statuses",
+				"colors"
+			]);
+			let visibleFlds = dicts.find(item=> item.name == 'visible_fields');
+			if (dicts.length > 0) {
+				for (let i = 0; i < dicts.length; i++) {
+					let record = visibleFlds.list.find(item=> item.dict == dicts[i].name);
+					let list = [];
+					let schema = [];
+					if (typeof record !== 'undefined') {
+						// есть запись по видимым полям, надо бы реализовать
+						let flds = record.flds.split(',');
+						dicts[i].list.map(item=> {	
+							// if (typeof item.status == 'undefined' || typeof item.status !== 'undefined' && item.status == 1) {
+								let itm = {};
+								for (let j = 0; j < flds.length; j++) itm[flds[j]] = item[flds[j]];
+								if (flds.indexOf("id") == -1) itm.id = item.id;
+								if (flds.indexOf("uid") == -1) itm.uid = item.uid;
+								if (flds.indexOf("dex_uid") == -1) itm.dex_uid = item.dex_uid;
+								if (flds.indexOf("status") == -1) itm.status = item.status;
+								if (flds.indexOf("title") == -1) itm.title = item.title;
+								list.push(itm);
+							// }					
+						});
+					} else {
+						list = dicts[i].list;
+					}
+					obj.list.push({name: dicts[i].name, description: dicts[i].description, list: list});
+				}
+				obj.status = 1;
+			}
+		}
+		return obj;
+	}
+	async GetBasesV1( user, data ) {
+		console.log(`запрос GetBases для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			let userConfiguration = user.GetAppConfiguration(this.#appid);
+			if ( typeof userConfiguration !== 'undefined' ) {
+				let bases = userConfiguration.configuration.bases;
+				bases.map(base=> {
+					let allOperators = this.Bases;
+					for ( let key in allOperators ) {
+						let operator = allOperators[key];
+						for (let i=0; i<operator.bases.length; i++) {
+							let element = operator.bases[i];
+							if (element.name == base) {
+								obj.list.push({id: element.configuration.pseudoName, description: element.configuration.description}); 
+							}
+						}
+					}
+				});
+				obj.status = 1;
+			} else obj.errs.push(`У пользователя ${user.UserName} не найдена конфигурация для приложения ${this.#appid}`);
+		}
+		return obj;
+	}
+	async CreateNewRecordInDictV1( user, data ) {
+		console.log(`запрос CreateNewRecordInDictV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			else {
+				let dicts = this.#core.DictsByNamesV1(data.dict);
+				if (typeof dicts === 'undefined') obj.errs.push('Указанный вами справочник не существуют');
+				else {
+					let dict = dicts.find(item=> item.name == data.dict);
+					let schema = dict.schema;
+					let fields = [];
+					for (let i = 0; i < schema.length; i++) {
+						let field = data.fields[schema[i].name];
+						if (typeof field !== 'undefined') {
+							let sc = dict.schema.find(item=> item.name == schema[i].name);
+							console.log("sc=> ", sc);
+							if (field.toString().length > sc.len ) obj.errs.push(`Поле ${schema[i].title} не может быть длиннее ${sc.len} символов`);
+							if (typeof sc.minLen !== 'undefined' && field.toString().length < sc.minLen) obj.errs.push(`Поле ${schema[i].title} не может быть меньше ${sc.minLen} символов`);
+							try {
+								if (sc.name != 'id') {
+									let unique = true;
+									if (typeof sc.unique !== 'undefined' && sc.unique == true) {
+										console.log(`SELECT * FROM ${dict.table} WHERE ${sc.name} = '${field}'`)
+										let rows = await this.Toolbox.sqlRequest('skyline1', `
+											SELECT * FROM ${dict.table} 
+											WHERE ${sc.name} = '${field}'
+										`);
+										if (rows.length > 0) obj.errs.push(`Для поля ${schema[i].title} уже существует запись с таким значением`);
+									}
+									let f;
+									field = this.Toolbox.htmlspecialchars(field);
+									if (sc.type == 'string') {
+										field = field.toString();
+										if (typeof field != 'string') obj.errs.push(`Поле ${schema[i].title} должно быть типа строка`);
+										else f = field;
+									} else if (sc.type == 'number') {
+										field = parseInt(field);
+										if (!this.#core.toolbox.isNumber(field)) obj.errs.push(`Поле ${schema[i].title} должно быть типа число`);
+										else f = field;
+									}
+								}
+							} catch(e) {
+								console.log(e);
+								obj.errs.push(`В процессе проверки типа поля ${schema[i].title} произошла ошибка`);
+							}
+							fields.push({name: schema[i].name, value: field});
+						} else obj.errs.push(`Поле ${schema[i].title} обязательно для заполнения`);
+					}
+					if (obj.errs.length == 0) {
+						let sets = [];
+						fields.map(item=> { 
+							if (item.name != 'id') {
+								if (item.name == "author") sets.push(`${item.name} = '${user.UserId}'`);
+								else sets.push(`${item.name} = '${item.value}'`);
+							}
+						});
+						let result = await this.Toolbox.sqlRequest('skyline1', `
+							INSERT INTO ${dict.table}
+							SET ${sets.join(',')}
+						`);
+						// console.log("result=> ", result);
+						if (result.affectedRows != 1) obj.errs.push("Ошибка добавления новой записи. Проверьте вводимые данные!");
+						else { 
+							obj.status = 1;
+							// обновить справочник
+							this.#core.updateDictV1(data.dict);
+						}
+					}
+				}
+			}
+		} 
+		return obj;
+	}
+	async EditDictRecordV1( user, data ) {
+		console.log(`запрос EditDictRecordV1 для appid = ${this.#appid}`);
+		let obj = {status: -1, errs: [], list: []};
+		let userConfiguration = this.#ValidateUser( user );
+		if ( userConfiguration.errs.length > 0 ) obj.errs = userConfiguration.errs;
+		else {
+			if (typeof data.dict === 'undefined') obj.errs.push('Вы не указали справочник');
+			if (typeof data.id === 'undefined')  obj.errs.push('Вы не указали какую запись редактирвать');
+			if (obj.errs.length == 0) {
+				let dicts = this.#core.DictsByNamesV1(data.dict);
+				if (typeof dicts === 'undefined') obj.errs.push('Указанный вами справочник не существуют');
+				else {
+					let dict = dicts.find(item=> item.name == data.dict);
+					let schema = dict.schema;
+					let fields = [];
+					for (let i = 0; i < schema.length; i++) {
+						let field = data.fields[schema[i].name];
+						if (typeof field !== 'undefined') {
+							let sc = dict.schema.find(item=> item.name == schema[i].name);
+							if (field.toString().length > sc.len ) obj.errs.push(`Поле ${schema[i].title} не может быть длиннее ${sc.len} символов`);
+							if (typeof sc.minLen !== 'undefined' && field.toString().length < sc.minLen) obj.errs.push(`Поле ${schema[i].title} не может быть меньше ${sc.minLen} символов`);
+							try {
+								if (sc.name != 'id') {
+									let f;
+									field = this.Toolbox.htmlspecialchars(field);
+									if (sc.type == 'string') {
+										field = field.toString();
+										if (typeof field != 'string') obj.errs.push(`Поле ${schema[i].title} должно быть типа строка`);
+										else f = field;
+									} else if (sc.type == 'number') {
+										field = parseInt(field);
+										if (!this.#core.toolbox.isNumber(field)) obj.errs.push(`Поле ${schema[i].title} должно быть типа число`);
+										else f = field;
+									}
+								}
+							} catch(e) {
+								console.log(e);
+								obj.errs.push(`В процессе проверки типа поля ${schema[i].title} произошла ошибка`);
+							}
+							fields.push({name: schema[i].name, value: field});
+						} else obj.errs.push(`Поле ${schema[i].title} обязательно для заполнения`);
+					}
+					if (obj.errs.length == 0) {
+						let sets = [];
+						fields.map(item=> { 
+							if (item.name != 'id') {
+								sets.push(`${item.name} = '${item.value}'`);
+							}
+						});
+						let result = await this.Toolbox.sqlRequest('skyline1', `
+							UPDATE ${dict.table}
+							SET ${sets.join(',')}
+							WHERE id = ${data.id}
+						`);
+						console.log("result=> ", result);
+						if (result.affectedRows != 1) obj.errs.push("Ошибка редактирования записи. Проверьте вводимые данные!");
+						else { 
+							obj.status = 1;
+							// обновить справочник
+							this.#core.updateDictV1(data.dict);
+						}
+					}
+				}
+			}
+		}
+		return obj;
+	}
+
+
+
+
 
 	// справочник пользователей
 	async GetUsersDictionary( user, data ) {

@@ -166,6 +166,10 @@ class Toolbox {
         }
         return str;
     }
+    // проверка на число
+    isNumber(num) {
+        return typeof num === 'number' && !isNaN(num);
+    }
     // преобразование первого символа в строчный
     toUpperCaseFirst(value) {
         if (value.length > 0) return value.charAt(0).toUpperCase() + value.slice(1);

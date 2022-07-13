@@ -477,7 +477,8 @@ var allowCrossDomain = function(req, res, next) {
 
 const listDefCons = {
 	'mysql' : [
-		{connectionLimit:60, host:'192.168.0.33', user:"dex", password:"dex", base:"skyline", pseudoName: 'skyline'}
+		{connectionLimit:60, host:'192.168.0.33', user:"dex", password:"dex", base:"skyline", pseudoName: 'skyline'},
+		{connectionLimit:60, host:'192.168.0.33', user:"dex", password:"dex", base:"skyline1", pseudoName: 'skyline1'}
 	]
 }
 

@@ -28,6 +28,7 @@ app.use(allowCrossDomain);
 app.use('/static', express.static(__dirname + '/mediafiles'));
 app.use('/adapters/mediafiles', express.static(__dirname + '/modules/apps/adapters/scans'));
 app.use('/adapters/printing', express.static(__dirname + '/modules/apps/adapters/printing_forms/temp'));
+app.use('/adapters/reports', express.static(__dirname + '/modules/apps/adapters/temp'));
 
 
 core.EXPRESS = app;
