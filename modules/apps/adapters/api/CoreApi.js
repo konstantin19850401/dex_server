@@ -441,7 +441,7 @@ class CoreApi extends Api {
 				"regions", "statuses", "sets_bases", "bases", "oparators", "identity_documents", "countries",
 				"mega_profiles","sim_types","stores","dicts_list","visible_fields","flds_tables","apps","controls","user_groups","mega_stores",
 				"contractor_types","contractors","rights","sets_rights","dex_data_fields","dex_visible_fields","sex","data_types","dex_document_statuses",
-				"colors"
+				"colors","el_signs"
 			]);
 			let visibleFlds = dicts.find(item=> item.name == 'visible_fields');
 			if (dicts.length > 0) {

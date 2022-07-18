@@ -2,6 +2,6 @@
 *.pdf
 *.log
 node_modules/
-modules/apps/adapters/temp
-modules/apps/adapters/logs
+modules/apps/adapters/temp/
+modules/apps/adapters/logs/
 

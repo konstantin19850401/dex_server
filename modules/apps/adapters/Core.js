@@ -117,6 +117,14 @@ class Core {
 					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false}
 				]
 			},
+			{name: 'el_signs', description: 'Справочник статусов электронных подписей', table: 'dict_el_signs', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'string', title: 'UID', sqlType: 'INT', len: 10, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
 			{name: 'dex_document_statuses', description: 'Справочник статусов для документов DEX', table: 'dict_dex_document_statuses', type: 'dict',
 				fields: [
 					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 11, autoIncrement: true, primaryKey: true, unique: true},

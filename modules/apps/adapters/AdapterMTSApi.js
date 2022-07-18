@@ -120,8 +120,13 @@ class AdapterMTSApi {
                                 if (typeof tle !== "undefined") { 
                                     sc.title = tle.title;
                                     if (tle.dict != "") { 
-                                        sc.foreignKey = `${tle.dict}.id`;
-                                        sc.type = "number";
+                                        if (tle.dict == "el_signs") {
+                                            sc.foreignKey = `${tle.dict}.uid`;
+                                            sc.type = "string";
+                                        } else {
+                                            sc.foreignKey = `${tle.dict}.id`;
+                                            sc.type = "number";
+                                        }
                                     }
                                 }
                                 schemaData.push(sc);
@@ -155,7 +160,14 @@ class AdapterMTSApi {
                                         } else if (typeof data.Document[schemaData[j].name] !== "undefined" && typeof data.Document[schemaData[j].name][0] !== "undefined" && typeof data.Document[schemaData[j].name][0] === "object") {
                                             if (typeof data.Document[schemaData[j].name][0]._ !== "undefined")  row[schemaData[j].name] = data.Document[schemaData[j].name][0]._;
                                             
-                                        }   
+                                        } 
+                                    } else {
+                                        if (schemaData[j].name == "ElSign") {
+                                            row[schemaData[j].name] = "0";
+                                        } else {
+                                            if (schemaData[j].type == "string") row[schemaData[j].name] = "";
+                                            else if (schemaData[j].type == "number") row[schemaData[j].name] = 0;
+                                        }
                                     }
                                 }
 
@@ -683,7 +695,7 @@ class AdapterMTSApi {
                     obj.base = packet.data.base;
                     let dicts = core.DictsByNamesV1(["stores"]);
                     let dictUnits = dicts.find(item=> item.name == "stores");
-                    
+
                     if (packet.data.subaction == "dutyDocs") {
                         let start, end, units = "";
                         if (typeof packet.data.filter === "undefined") obj.errs.push("Вы не указали фильтр");
@@ -957,7 +969,8 @@ class AdapterMTSApi {
                             }
                         }
                     } else if (packet.data.subaction == "activation") {
-                        let showPartyNum = false, showBalance = false, showUserData = false, journalParams = "journal"; 
+                        console.log("сверка по активации");
+                        let showPartyNum = false, showBalance = false, showUserData = false, journalParams = "journal", sims = []; 
                         let jparams = ["journal", "archive", "journalAndArchive"];
                         if (typeof packet.data.filter === "undefined") obj.errs.push("Вы не указали фильтр");
                         else {
@@ -966,12 +979,373 @@ class AdapterMTSApi {
                             if (typeof packet.data.filter.showUserData === "boolean" ) showUserData = packet.data.filter.showUserData;
                             if (typeof packet.data.filter.journalParams !== "undefined" && jparams.indexOf(packet.data.filter.journalParams) != -1) journalParams = packet.data.filter.journalParams;
                             else obj.errs.push("Вы указали не верные параметры журнала");
-                            if (typeof packet.data.filter.sims !== "undefined" && Array.isArray(packet.data.filter.sims)) journalParams = packet.data.filter.journalParams;
+                            if (typeof packet.data.filter.sims !== "undefined" && Array.isArray(packet.data.filter.sims)) sims = packet.data.filter.sims;
                             else obj.errs.push("Вы не указали данные для сверки");
 
                             if (obj.errs.length == 0) {
-                                
-                            }
+                                console.log("ошибок нет, работаем");
+                                let tplans = await toolbox.sqlRequest(base, `SELECT plan_id, title FROM um_plans`);
+                                let units = await toolbox.sqlRequest(base, `SELECT uid, title FROM units`);
+                                let jp = {
+                                    journal: ["journal"],
+                                    archive: ["archive"],
+                                    journalAndArchive: ["journal", "archive"]
+                                };
+                                let up = {
+                                    journal: ["um_data"],
+                                    archive: ["um_data_out"],
+                                    journalAndArchive: ["um_data", "um_data_out"]
+                                };
+                                let jru = {
+                                    journal: ["Журнал"],
+                                    archive: ["Архив"],
+                                    journalAndArchive: ["Журнал", "Архив"]
+                                }
+                                let balance = "";
+                                if (showBalance) balance = ", balance";
+                                let list = []; let msisdns = [];
+                                let moment = toolbox.getMoment();
+                                sims.map(item=> msisdns.push(item.MSISDN));
+                                // for (let i = 0; i < up[journalParams].length; i++) {
+                                //     console.log("рассматриваем справочник ", up[journalParams][i]);
+                                //     // console.log(`Запрос на справочник SELECT  msisdn, icc, fs, owner_id, plan_id, status, date_in, date_own, date_sold, party_id ${balance}
+                                //     //     FROM ${up[journalParams][i]} 
+                                //     //     WHERE msisdn IN (${msisdns.join(",")})
+                                //     //     ORDER BY date_sold`);
+                                //     let rows = await toolbox.sqlRequest(base, `
+                                //         SELECT msisdn, icc, fs, owner_id, plan_id, status, date_in, date_own, date_sold, party_id ${balance}
+                                //         FROM ${up[journalParams][i]} 
+                                //         WHERE msisdn IN (${msisdns.join(",")})
+                                //         ORDER BY date_sold
+                                //     `);
+                                //     console.log("Количество записей в справочнике => ", rows.length);
+                                //     for (let j = 0; j < rows.length; j++) {
+                                //         let listItem = list.find(item=> item.msisdn == rows[j].msisdn);
+                                //         if (typeof listItem !== "undefined") {
+                                //             let op1 = listItem.d_sold == "-" ? toolbox.moment().add(1, "days") : listItem.d_sold;
+                                //             let op2 = rows[j].date_sold;
+                                //             if (jp[journalParams][i] == "journal") {
+                                //                 if (parseInt(rows[j].status) < 2) op2 = toolbox.moment().add(1, "days");
+                                //             } else {
+                                //                 if (parseInt(rows[j].status) < 2) {
+                                //                     if (rows[j].date_own.length != 8 || !toolbox.isNumber(parseInt(rows[j].date_own))) {
+                                //                         if (rows[j].date_in.length != 8 || !toolbox.isNumber(parseInt(rows[j].date_in))) {
+                                //                             let op2 = toolbox.moment("00010101", "YYYYMMDD");
+                                //                         } else {
+                                //                             op2 = toolbox.moment(rows[j].date_in, "YYYYMMDD");
+                                //                         }
+                                //                     } else { 
+                                //                         op2 = toolbox.moment(rows[j].date_own, "YYYYMMDD");
+                                //                     }
+                                //                 }
+                                //             }
+                                //             try {
+                                //                 if (op1.isBefore(op2)) {
+                                //                     let owner = "-", d_sold = "-", simBalance = "";;
+                                //                     let cunits = units.find(item=> item.uid == rows[j].owner_id);
+                                //                     if (typeof cunits !== "undefined") owner = cunits.title;
+                                //                     if (parseInt(rows[j].status) == 2) d_sold = toolbox.moment(rows[j].date_sold, "YYYYMMDD");
+                                //                     if (showBalance) simBalance = rows[j].balance;
+
+                                //                     listItem.icc = rows[j].icc;
+                                //                     listItem.fs = rows[j].fs;
+                                //                     listItem.owner = owner;
+                                //                     listItem.d_sold = d_sold;
+                                //                     listItem.plan = rows[j].plan_id;
+                                //                     listItem.jtype = jru[journalParams][i];
+                                //                     listItem.balance = simBalance;
+                                //                     listItem.party = rows[j].party_id;
+                                //                 }
+                                //             } catch (e) {
+                                //                 console.log("Ошибка => ", e);
+                                //                 console.log("ошибка op1 ", op1);
+                                //                 console.log("ошибка op2 ", op2);
+                                //             }
+                                            
+                                //         } else {
+                                //             let owner = "-", d_sold = "-", simBalance = "";
+                                //             let cunits = units.find(item=> item.uid == rows[j].owner_id);
+                                //             if (typeof cunits !== "undefined") owner = cunits.title;
+                                //             if (parseInt(rows[j].status) == 2) d_sold = toolbox.moment(rows[j].date_sold, "YYYYMMDD");
+                                //             if (showBalance) simBalance = rows[j].balance;
+                                //             list.push({
+                                //                 msisdn: rows[j].msisdn, 
+                                //                 icc: rows[j].icc,
+                                //                 fs: parseInt(rows[j].fs) == 0 ? "МБ" : "ФС",
+                                //                 owner: owner,
+                                //                 d_sold: d_sold,
+                                //                 plan: rows[j].plan_id,
+                                //                 jtype: jru[journalParams][i],
+                                //                 balance: simBalance,
+                                //                 party: rows[j].party_id
+                                //             });
+                                //         }
+                                //     }
+                                // }
+
+                                // // console.log("list => ", list);
+
+                                // console.log("Загрузка документов");
+                                // let mda = [];
+                                // for (let i = 0; i < jp[journalParams].length; i++) {
+                                //     console.log("рассматриваем журнал ", jp[journalParams][i]);
+                                //     // let rows = await toolbox.sqlRequest(base, `
+                                //     //     SELECT * FROM ${jp[journalParams][i]} 
+                                //     //     ORDER BY jdocdate
+                                //     // `);
+
+
+
+                                //     // let rows = [];
+                                //     let likeArr = [];
+                                //     for (let j = 0; j < sims.length; j++) {
+                                //         likeArr.push(`digest LIKE '%${sims[j].MSISDN}%'`);
+                                //     }
+                                //     let rows = await toolbox.sqlRequest(base, `
+                                //         SELECT * FROM ${jp[journalParams][i]} 
+                                //         WHERE ${likeArr.join(" OR ")}
+                                //     `);
+
+                                //     // for (let j = 0; j < sims.length; j++) {
+                                //     //     let rw = await toolbox.sqlRequest(base, `
+                                //     //         SELECT * FROM ${jp[journalParams][i]} 
+                                //     //         WHERE digest LIKE '%${sims[j].MSISDN}%'
+                                //     //     `);
+                                //     //     rw.map(item=> rows.push(item));
+                                //     // }
+                                //     console.log("количество записей ", rows.length);
+                                //     for (let j = 0; j < rows.length; j++) {
+                                //         let fio, dul, birth;
+                                //         let dpCode = "", assignedDpCode = "";
+                                //         let sdocdate = toolbox.moment(rows[j].jdocdate, "YYYYMMDD");
+                                //         let xml = await toolbox.xmlToJs(rows[j].data);
+                                //         if (showUserData) {
+                                //             fio = toolbox.fullNameToFio(xml.Document.LastName[0], xml.Document.FirstName[0], xml.Document.SecondName[0]);
+                                //             dul = `${xml.Document.FizDocSeries[0].replace(" ", "")} ${xml.Document.FizDocNumber[0]}`;
+                                //             birth = xml.Document.Birth[0];
+                                //         }
+                                //         if (typeof xml.Document.DPCodeKind !== "undefined" && typeof xml.Document.DPCodeKind[0] !== "undefined") dpCode = xml.Document.DPCodeKind[0];
+                                //         if (typeof xml.Document.AssignedDPCode !== "undefined" && typeof xml.Document.AssignedDPCode[0] !== "undefined") assignedDpCode = xml.Document.AssignedDPCode[0];
+                                //         let msisdn = xml.Document.MSISDN[0];
+                                //         mda.push({
+                                //             msisdn: msisdn, 
+                                //             icc: xml.Document.ICC[0],
+                                //             dpCode: dpCode,
+                                //             assignedDpCode: assignedDpCode,
+                                //             date: sdocdate.format("DD.MM.YYYY"),
+                                //             jtype: jru[journalParams][i],
+                                //             fio: fio,
+                                //             dul: dul,
+                                //             birth: birth
+                                //         });
+                                //     }
+                                // }
+
+                                // console.log("Длина mda => ", mda.length);
+                                // console.log("Длина mda => ", mda);
+                                // console.log("Обработка информации");
+                                // for (let i = 0; i < sims.length; i++) {
+                                //     let itm = list.find(item=> item.msisdn == sims[i].MSISDN);
+                                //     if (typeof itm !== "undefined") {
+                                //         try {
+                                //             sims[i].owner = itm.owner;
+                                //             sims[i].d_sold = itm.d_sold == "-" ? itm.d_sold : itm.d_sold.format("DD.MM.YYYY");
+                                //             sims[i].plan = itm.plan;
+                                //             sims[i].jtype = itm.jtype;
+                                //             sims[i].fs = itm.fs;
+                                //             if (showBalance) sims[i].balance = itm.balance; 
+                                //             if (showPartyNum) sims[i].partyNum = itm.party; 
+                                //         } catch (e) {
+                                //             console.log("ошибка ", e);
+                                //             console.log("docitem.date=> ", itm.d_sold);
+                                //         }
+                                //     }
+                                //     let docitem = mda.find(item=> item.msisdn == sims[i].MSISDN);
+                                //     if (typeof docitem !== "undefined") {
+                                //         if (docitem.icc == itm.icc) {
+                                //             try {
+                                //                 sims[i].date = docitem.date;
+                                //                 sims[i].jtype = docitem.jtype;
+                                //                 sims[i].dpCode = docitem.dpCode;
+                                //                 sims[i].assignedDpCode = docitem.assignedDpCode;
+                                //                 if (showUserData) {
+                                //                     sims[i].fio = docitem.fio;
+                                //                     sims[i].dul = docitem.dul;
+                                //                     sims[i].birth = docitem.birth;
+                                //                 }
+                                //             } catch (e) {
+                                //                 console.log("ошибка ", e);
+                                //                 console.log("docitem.date=> ", docitem.date);
+                                //             }
+                                //         }
+                                //     }
+                                // }
+                                // console.log("sims===> ", sims);
+
+
+                                let allUmDataRows = [];
+                                // соберем все данные из справочника sim и положим их в общий массив
+                                for (let i = 0; i < up[journalParams].length; i++) {
+                                    let rows = await toolbox.sqlRequest(base, `
+                                        SELECT msisdn, icc, fs, owner_id, plan_id, status, date_in, date_own, date_sold, party_id ${balance}
+                                        FROM ${up[journalParams][i]} 
+                                        WHERE msisdn IN (${msisdns.join(",")})
+                                        ORDER BY date_sold
+                                    `);
+                                    for (let j = 0; j < rows.length; j++) { 
+                                        rows[j].jtype_sim = jru[journalParams][i];
+                                        allUmDataRows.push(rows[j]);
+                                    }
+                                }
+
+                                console.log("allUmDataRows => ", allUmDataRows);
+                                console.log("allUmDataRows length=> ", allUmDataRows.length);
+
+                                // обработаем общий массив
+                                let finalUmDataRows = [];
+                                for (let i = 0; i < allUmDataRows.length; i++) {
+                                    let umDataItem = finalUmDataRows.find(item=> item.msisdn == allUmDataRows[i].msisdn);
+                                    if (typeof umDataItem !== "undefined") {
+                                        let op1 = umDataItem.d_sold == "-" ? toolbox.moment().add(1, "days") : umDataItem.d_sold;
+                                        let op2 = allUmDataRows[i].date_sold;
+                                        if (allUmDataRows[i].jtype_sim == "Журнал") {
+                                            console.log("Это журнал");
+                                            if (parseInt(allUmDataRows[i].status) < 2) op2 = toolbox.moment().add(1, "days");
+                                        } else {
+                                            console.log("Это не журнал");
+                                            if (parseInt(allUmDataRows[i].status) < 2) {
+                                                if (allUmDataRows[i].date_own.length != 8 || !toolbox.isNumber(parseInt(allUmDataRows[i].date_own))) {
+                                                    if (allUmDataRows[i].date_in.length != 8 || !toolbox.isNumber(parseInt(allUmDataRows[i].date_in))) {
+                                                        let op2 = toolbox.moment("00010101", "YYYYMMDD");
+                                                    } else {
+                                                        op2 = toolbox.moment(allUmDataRows[i].date_in, "YYYYMMDD");
+                                                    }
+                                                } else { 
+                                                    op2 = toolbox.moment(allUmDataRows[i].date_own, "YYYYMMDD");
+                                                }
+                                            }
+                                        }
+
+                                        if (op1.isBefore(op2)) {
+                                            console.log("меняем");
+                                            let owner = "-", d_sold = "-", simBalance = "";;
+                                            let cunits = units.find(item=> item.uid == allUmDataRows[i].owner_id);
+                                            if (typeof cunits !== "undefined") owner = cunits.title;
+                                            if (parseInt(allUmDataRows[i].status) == 2) d_sold = toolbox.moment(allUmDataRows[i].date_sold, "YYYYMMDD");
+                                            if (showBalance) simBalance = allUmDataRows[i].balance;
+
+                                            umDataItem.icc = allUmDataRows[i].icc;
+                                            umDataItem.fs = allUmDataRows[i].fs;
+                                            umDataItem.owner = owner;
+                                            umDataItem.d_sold = d_sold;
+                                            umDataItem.plan = allUmDataRows[i].plan_id;
+                                            umDataItem.jtype_sim = allUmDataRows[i].jtype_sim;
+                                            umDataItem.balance = simBalance;
+                                            umDataItem.partyNum = allUmDataRows[i].party_id;
+                                        }
+                                    } else {
+                                        let owner = "-", d_sold = "-", simBalance = "";
+                                        let cunits = units.find(item=> item.uid == allUmDataRows[i].owner_id);
+                                        if (typeof cunits !== "undefined") owner = cunits.title;
+                                        if (parseInt(allUmDataRows[i].status) == 2) d_sold = toolbox.moment(allUmDataRows[i].date_sold, "YYYYMMDD");
+                                        if (showBalance) simBalance = allUmDataRows[i].balance;
+                                        finalUmDataRows.push({
+                                            msisdn: allUmDataRows[i].msisdn, 
+                                            icc: allUmDataRows[i].icc,
+                                            fs: parseInt(allUmDataRows[i].fs) == 0 ? "МБ" : "ФС",
+                                            owner: owner,
+                                            d_sold: d_sold,
+                                            plan: allUmDataRows[i].plan_id,
+                                            jtype_sim: allUmDataRows[i].jtype_sim,
+                                            balance: simBalance,
+                                            partyNum: allUmDataRows[i].party_id
+                                        });
+                                    }
+                                }
+
+                                // console.log("finalUmDataRows=> ", finalUmDataRows);
+                                sims = finalUmDataRows;
+
+                                // преобразуем даты продаж в вид xx.xx.xxxx
+                                for (let i = 0; i < sims.length; i++) sims[i].d_sold = sims[i].d_sold == "-" ? sims[i].d_sold : sims[i].d_sold.format("DD.MM.YYYY");
+
+                                // загрузка документов
+                                let docs = [];
+
+                                for (let i = 0; i < jp[journalParams].length; i++) {
+                                    let likeArr = [];
+                                    for (let j = 0; j < sims.length; j++) {
+                                        likeArr.push(`digest LIKE '%${sims[j].msisdn}%'`);
+                                    }
+                                    let rows = await toolbox.sqlRequest(base, `
+                                        SELECT * FROM ${jp[journalParams][i]} 
+                                        WHERE ${likeArr.join(" OR ")}
+                                    `);
+
+
+                                    for (let j = 0; j < sims.length; j++) {
+                                        // console.log("sims[j].d_sold=> ", sims[j].d_sold, " msisdn=> ", sims[j].msisdn);
+                                        for (let k = 0; k < rows.length; k++) {
+                                            let xml = await toolbox.xmlToJs(rows[k].data);
+                                            if (xml.Document.MSISDN[0] == sims[j].msisdn && xml.Document.ICC[0] == sims[j].icc) {
+                                                let sdocdate = toolbox.moment(rows[k].jdocdate, "YYYYMMDD");
+                                                let dpCode = "", assignedDpCode = "";
+                                                let fio = "", dul = "", birth = "";
+                                                if (typeof xml.Document.DPCodeKind !== "undefined" && typeof xml.Document.DPCodeKind[0] !== "undefined") dpCode = xml.Document.DPCodeKind[0];
+                                                if (typeof xml.Document.AssignedDPCode !== "undefined" && typeof xml.Document.AssignedDPCode[0] !== "undefined") assignedDpCode = xml.Document.AssignedDPCode[0];
+                                                if (showUserData) {
+                                                    fio = `${xml.Document.LastName[0]} ${xml.Document.FirstName[0]} ${xml.Document.SecondName[0]}`;
+                                                    dul = `${xml.Document.FizDocSeries[0].replace(" ", "")} ${xml.Document.FizDocNumber[0]}`;
+                                                    birth = xml.Document.Birth[0];
+                                                }
+                                                sims[j].dpCode = dpCode;
+                                                sims[j].assignedDpCode = assignedDpCode;
+                                                sims[j].fio = fio;
+                                                sims[j].dul = dul;
+                                                sims[j].birth = birth;
+                                                sims[j].jtype = jru[journalParams][i];
+                                                sims[j].date = sdocdate.format("DD.MM.YYYY");
+                                                break;
+                                            }
+                                        }
+                                    }
+
+
+                                }
+                              
+
+
+
+                                obj.schema.push({name: 'msisdn', type: 'string', title: 'MSISDN'});
+                                obj.schema.push({name: 'icc', type: 'string', title: 'ICC'});
+                                obj.schema.push({name: 'date', type: 'date', title: 'Дата продажи в журнале'});
+                                obj.schema.push({name: 'd_sold', type: 'date', title: 'Дата продажи в справочнике'});
+                                obj.schema.push({name: 'jtype', type: 'string', title: 'Журнал-источник'});
+                                obj.schema.push({name: 'jtype_sim', type: 'string', title: 'Справочник-источник'});
+                                obj.schema.push({name: 'owner', type: 'string', title: 'Владелец'});
+                                obj.schema.push({name: 'plan', type: 'string', title: 'ТП'});
+                                obj.schema.push({name: 'fs', type: 'string', title: 'ФС'});
+                                obj.schema.push({name: 'dpCode', type: 'string', title: 'Тип точки'});
+                                obj.schema.push({name: 'assignedDpCode', type: 'string', title: 'Код точки'});
+                                if (showBalance) obj.schema.push({name: 'balance', type: 'string', title: 'Баланс'});
+                                if (showPartyNum) obj.schema.push({name: 'partyNum', type: 'string', title: 'Номер партии'});
+                                if (showUserData) {
+                                    obj.schema.push({name: 'fio', type: 'string', title: 'ФИО'});
+                                    obj.schema.push({name: 'dul', type: 'string', title: 'ДУЛ'});
+                                    obj.schema.push({name: 'birth', type: 'date', title: 'Дата рождения'});
+                                }
+                               
+
+                                // добавим в схему доп поля, которые пришли от пользователя
+                                for (let i = 0; i < sims.length; i++) {
+                                    for (let key in sims[i]) {
+                                        let s = obj.schema.find(item=> item.name == key);
+                                        if (typeof s === "undefined") obj.schema.push({name: key, type: 'string', title: key});
+                                    }
+                                }
+
+                                obj.list = sims;
+                            }   
                         }
                     }
                    
