@@ -983,7 +983,8 @@ class AdapterMTSApi {
                             else obj.errs.push("Вы не указали данные для сверки");
 
                             if (obj.errs.length == 0) {
-                                console.log("ошибок нет, работаем");
+                                let arr = [];
+                                // console.log("ошибок нет, работаем");
                                 let tplans = await toolbox.sqlRequest(base, `SELECT plan_id, title FROM um_plans`);
                                 let units = await toolbox.sqlRequest(base, `SELECT uid, title FROM units`);
                                 let jp = {
@@ -1006,183 +1007,7 @@ class AdapterMTSApi {
                                 let list = []; let msisdns = [];
                                 let moment = toolbox.getMoment();
                                 sims.map(item=> msisdns.push(item.MSISDN));
-                                // for (let i = 0; i < up[journalParams].length; i++) {
-                                //     console.log("рассматриваем справочник ", up[journalParams][i]);
-                                //     // console.log(`Запрос на справочник SELECT  msisdn, icc, fs, owner_id, plan_id, status, date_in, date_own, date_sold, party_id ${balance}
-                                //     //     FROM ${up[journalParams][i]} 
-                                //     //     WHERE msisdn IN (${msisdns.join(",")})
-                                //     //     ORDER BY date_sold`);
-                                //     let rows = await toolbox.sqlRequest(base, `
-                                //         SELECT msisdn, icc, fs, owner_id, plan_id, status, date_in, date_own, date_sold, party_id ${balance}
-                                //         FROM ${up[journalParams][i]} 
-                                //         WHERE msisdn IN (${msisdns.join(",")})
-                                //         ORDER BY date_sold
-                                //     `);
-                                //     console.log("Количество записей в справочнике => ", rows.length);
-                                //     for (let j = 0; j < rows.length; j++) {
-                                //         let listItem = list.find(item=> item.msisdn == rows[j].msisdn);
-                                //         if (typeof listItem !== "undefined") {
-                                //             let op1 = listItem.d_sold == "-" ? toolbox.moment().add(1, "days") : listItem.d_sold;
-                                //             let op2 = rows[j].date_sold;
-                                //             if (jp[journalParams][i] == "journal") {
-                                //                 if (parseInt(rows[j].status) < 2) op2 = toolbox.moment().add(1, "days");
-                                //             } else {
-                                //                 if (parseInt(rows[j].status) < 2) {
-                                //                     if (rows[j].date_own.length != 8 || !toolbox.isNumber(parseInt(rows[j].date_own))) {
-                                //                         if (rows[j].date_in.length != 8 || !toolbox.isNumber(parseInt(rows[j].date_in))) {
-                                //                             let op2 = toolbox.moment("00010101", "YYYYMMDD");
-                                //                         } else {
-                                //                             op2 = toolbox.moment(rows[j].date_in, "YYYYMMDD");
-                                //                         }
-                                //                     } else { 
-                                //                         op2 = toolbox.moment(rows[j].date_own, "YYYYMMDD");
-                                //                     }
-                                //                 }
-                                //             }
-                                //             try {
-                                //                 if (op1.isBefore(op2)) {
-                                //                     let owner = "-", d_sold = "-", simBalance = "";;
-                                //                     let cunits = units.find(item=> item.uid == rows[j].owner_id);
-                                //                     if (typeof cunits !== "undefined") owner = cunits.title;
-                                //                     if (parseInt(rows[j].status) == 2) d_sold = toolbox.moment(rows[j].date_sold, "YYYYMMDD");
-                                //                     if (showBalance) simBalance = rows[j].balance;
-
-                                //                     listItem.icc = rows[j].icc;
-                                //                     listItem.fs = rows[j].fs;
-                                //                     listItem.owner = owner;
-                                //                     listItem.d_sold = d_sold;
-                                //                     listItem.plan = rows[j].plan_id;
-                                //                     listItem.jtype = jru[journalParams][i];
-                                //                     listItem.balance = simBalance;
-                                //                     listItem.party = rows[j].party_id;
-                                //                 }
-                                //             } catch (e) {
-                                //                 console.log("Ошибка => ", e);
-                                //                 console.log("ошибка op1 ", op1);
-                                //                 console.log("ошибка op2 ", op2);
-                                //             }
-                                            
-                                //         } else {
-                                //             let owner = "-", d_sold = "-", simBalance = "";
-                                //             let cunits = units.find(item=> item.uid == rows[j].owner_id);
-                                //             if (typeof cunits !== "undefined") owner = cunits.title;
-                                //             if (parseInt(rows[j].status) == 2) d_sold = toolbox.moment(rows[j].date_sold, "YYYYMMDD");
-                                //             if (showBalance) simBalance = rows[j].balance;
-                                //             list.push({
-                                //                 msisdn: rows[j].msisdn, 
-                                //                 icc: rows[j].icc,
-                                //                 fs: parseInt(rows[j].fs) == 0 ? "МБ" : "ФС",
-                                //                 owner: owner,
-                                //                 d_sold: d_sold,
-                                //                 plan: rows[j].plan_id,
-                                //                 jtype: jru[journalParams][i],
-                                //                 balance: simBalance,
-                                //                 party: rows[j].party_id
-                                //             });
-                                //         }
-                                //     }
-                                // }
-
-                                // // console.log("list => ", list);
-
-                                // console.log("Загрузка документов");
-                                // let mda = [];
-                                // for (let i = 0; i < jp[journalParams].length; i++) {
-                                //     console.log("рассматриваем журнал ", jp[journalParams][i]);
-                                //     // let rows = await toolbox.sqlRequest(base, `
-                                //     //     SELECT * FROM ${jp[journalParams][i]} 
-                                //     //     ORDER BY jdocdate
-                                //     // `);
-
-
-
-                                //     // let rows = [];
-                                //     let likeArr = [];
-                                //     for (let j = 0; j < sims.length; j++) {
-                                //         likeArr.push(`digest LIKE '%${sims[j].MSISDN}%'`);
-                                //     }
-                                //     let rows = await toolbox.sqlRequest(base, `
-                                //         SELECT * FROM ${jp[journalParams][i]} 
-                                //         WHERE ${likeArr.join(" OR ")}
-                                //     `);
-
-                                //     // for (let j = 0; j < sims.length; j++) {
-                                //     //     let rw = await toolbox.sqlRequest(base, `
-                                //     //         SELECT * FROM ${jp[journalParams][i]} 
-                                //     //         WHERE digest LIKE '%${sims[j].MSISDN}%'
-                                //     //     `);
-                                //     //     rw.map(item=> rows.push(item));
-                                //     // }
-                                //     console.log("количество записей ", rows.length);
-                                //     for (let j = 0; j < rows.length; j++) {
-                                //         let fio, dul, birth;
-                                //         let dpCode = "", assignedDpCode = "";
-                                //         let sdocdate = toolbox.moment(rows[j].jdocdate, "YYYYMMDD");
-                                //         let xml = await toolbox.xmlToJs(rows[j].data);
-                                //         if (showUserData) {
-                                //             fio = toolbox.fullNameToFio(xml.Document.LastName[0], xml.Document.FirstName[0], xml.Document.SecondName[0]);
-                                //             dul = `${xml.Document.FizDocSeries[0].replace(" ", "")} ${xml.Document.FizDocNumber[0]}`;
-                                //             birth = xml.Document.Birth[0];
-                                //         }
-                                //         if (typeof xml.Document.DPCodeKind !== "undefined" && typeof xml.Document.DPCodeKind[0] !== "undefined") dpCode = xml.Document.DPCodeKind[0];
-                                //         if (typeof xml.Document.AssignedDPCode !== "undefined" && typeof xml.Document.AssignedDPCode[0] !== "undefined") assignedDpCode = xml.Document.AssignedDPCode[0];
-                                //         let msisdn = xml.Document.MSISDN[0];
-                                //         mda.push({
-                                //             msisdn: msisdn, 
-                                //             icc: xml.Document.ICC[0],
-                                //             dpCode: dpCode,
-                                //             assignedDpCode: assignedDpCode,
-                                //             date: sdocdate.format("DD.MM.YYYY"),
-                                //             jtype: jru[journalParams][i],
-                                //             fio: fio,
-                                //             dul: dul,
-                                //             birth: birth
-                                //         });
-                                //     }
-                                // }
-
-                                // console.log("Длина mda => ", mda.length);
-                                // console.log("Длина mda => ", mda);
-                                // console.log("Обработка информации");
-                                // for (let i = 0; i < sims.length; i++) {
-                                //     let itm = list.find(item=> item.msisdn == sims[i].MSISDN);
-                                //     if (typeof itm !== "undefined") {
-                                //         try {
-                                //             sims[i].owner = itm.owner;
-                                //             sims[i].d_sold = itm.d_sold == "-" ? itm.d_sold : itm.d_sold.format("DD.MM.YYYY");
-                                //             sims[i].plan = itm.plan;
-                                //             sims[i].jtype = itm.jtype;
-                                //             sims[i].fs = itm.fs;
-                                //             if (showBalance) sims[i].balance = itm.balance; 
-                                //             if (showPartyNum) sims[i].partyNum = itm.party; 
-                                //         } catch (e) {
-                                //             console.log("ошибка ", e);
-                                //             console.log("docitem.date=> ", itm.d_sold);
-                                //         }
-                                //     }
-                                //     let docitem = mda.find(item=> item.msisdn == sims[i].MSISDN);
-                                //     if (typeof docitem !== "undefined") {
-                                //         if (docitem.icc == itm.icc) {
-                                //             try {
-                                //                 sims[i].date = docitem.date;
-                                //                 sims[i].jtype = docitem.jtype;
-                                //                 sims[i].dpCode = docitem.dpCode;
-                                //                 sims[i].assignedDpCode = docitem.assignedDpCode;
-                                //                 if (showUserData) {
-                                //                     sims[i].fio = docitem.fio;
-                                //                     sims[i].dul = docitem.dul;
-                                //                     sims[i].birth = docitem.birth;
-                                //                 }
-                                //             } catch (e) {
-                                //                 console.log("ошибка ", e);
-                                //                 console.log("docitem.date=> ", docitem.date);
-                                //             }
-                                //         }
-                                //     }
-                                // }
-                                // console.log("sims===> ", sims);
-
-
+                            
                                 let allUmDataRows = [];
                                 // соберем все данные из справочника sim и положим их в общий массив
                                 for (let i = 0; i < up[journalParams].length; i++) {
@@ -1198,8 +1023,8 @@ class AdapterMTSApi {
                                     }
                                 }
 
-                                console.log("allUmDataRows => ", allUmDataRows);
-                                console.log("allUmDataRows length=> ", allUmDataRows.length);
+                                // console.log("allUmDataRows => ", allUmDataRows);
+                                // console.log("allUmDataRows length=> ", allUmDataRows.length);
 
                                 // обработаем общий массив
                                 let finalUmDataRows = [];
@@ -1209,10 +1034,10 @@ class AdapterMTSApi {
                                         let op1 = umDataItem.d_sold == "-" ? toolbox.moment().add(1, "days") : umDataItem.d_sold;
                                         let op2 = allUmDataRows[i].date_sold;
                                         if (allUmDataRows[i].jtype_sim == "Журнал") {
-                                            console.log("Это журнал");
+                                            // console.log("Это журнал");
                                             if (parseInt(allUmDataRows[i].status) < 2) op2 = toolbox.moment().add(1, "days");
                                         } else {
-                                            console.log("Это не журнал");
+                                            // console.log("Это не журнал");
                                             if (parseInt(allUmDataRows[i].status) < 2) {
                                                 if (allUmDataRows[i].date_own.length != 8 || !toolbox.isNumber(parseInt(allUmDataRows[i].date_own))) {
                                                     if (allUmDataRows[i].date_in.length != 8 || !toolbox.isNumber(parseInt(allUmDataRows[i].date_in))) {
@@ -1227,7 +1052,7 @@ class AdapterMTSApi {
                                         }
 
                                         if (op1.isBefore(op2)) {
-                                            console.log("меняем");
+                                            // console.log("меняем");
                                             let owner = "-", d_sold = "-", simBalance = "";;
                                             let cunits = units.find(item=> item.uid == allUmDataRows[i].owner_id);
                                             if (typeof cunits !== "undefined") owner = cunits.title;
@@ -1249,45 +1074,49 @@ class AdapterMTSApi {
                                         if (typeof cunits !== "undefined") owner = cunits.title;
                                         if (parseInt(allUmDataRows[i].status) == 2) d_sold = toolbox.moment(allUmDataRows[i].date_sold, "YYYYMMDD");
                                         if (showBalance) simBalance = allUmDataRows[i].balance;
+
+                                        let tpTitle = allUmDataRows[i].plan_id;
+                                        let tp = tplans.find(item=> item.plan_id == allUmDataRows[i].plan_id);
+                                        if (typeof tp !== "undefined") tpTitle = tp.title;
+
                                         finalUmDataRows.push({
                                             msisdn: allUmDataRows[i].msisdn, 
                                             icc: allUmDataRows[i].icc,
                                             fs: parseInt(allUmDataRows[i].fs) == 0 ? "МБ" : "ФС",
                                             owner: owner,
                                             d_sold: d_sold,
-                                            plan: allUmDataRows[i].plan_id,
+                                            plan: tpTitle,
                                             jtype_sim: allUmDataRows[i].jtype_sim,
                                             balance: simBalance,
-                                            partyNum: allUmDataRows[i].party_id
+                                            partyNum: allUmDataRows[i].party_id,
                                         });
                                     }
                                 }
 
                                 // console.log("finalUmDataRows=> ", finalUmDataRows);
-                                sims = finalUmDataRows;
+                                arr = finalUmDataRows;
 
                                 // преобразуем даты продаж в вид xx.xx.xxxx
-                                for (let i = 0; i < sims.length; i++) sims[i].d_sold = sims[i].d_sold == "-" ? sims[i].d_sold : sims[i].d_sold.format("DD.MM.YYYY");
+                                for (let i = 0; i < arr.length; i++) arr[i].d_sold = arr[i].d_sold == "-" ? arr[i].d_sold : arr[i].d_sold.format("DD.MM.YYYY");
 
                                 // загрузка документов
                                 let docs = [];
 
                                 for (let i = 0; i < jp[journalParams].length; i++) {
                                     let likeArr = [];
-                                    for (let j = 0; j < sims.length; j++) {
-                                        likeArr.push(`digest LIKE '%${sims[j].msisdn}%'`);
+                                    for (let j = 0; j < arr.length; j++) {
+                                        likeArr.push(`digest LIKE '%${arr[j].msisdn}%'`);
                                     }
                                     let rows = await toolbox.sqlRequest(base, `
                                         SELECT * FROM ${jp[journalParams][i]} 
                                         WHERE ${likeArr.join(" OR ")}
                                     `);
 
-
-                                    for (let j = 0; j < sims.length; j++) {
+                                    for (let j = 0; j < arr.length; j++) {
                                         // console.log("sims[j].d_sold=> ", sims[j].d_sold, " msisdn=> ", sims[j].msisdn);
                                         for (let k = 0; k < rows.length; k++) {
                                             let xml = await toolbox.xmlToJs(rows[k].data);
-                                            if (xml.Document.MSISDN[0] == sims[j].msisdn && xml.Document.ICC[0] == sims[j].icc) {
+                                            if (xml.Document.MSISDN[0] == arr[j].msisdn && xml.Document.ICC[0] == arr[j].icc) {
                                                 let sdocdate = toolbox.moment(rows[k].jdocdate, "YYYYMMDD");
                                                 let dpCode = "", assignedDpCode = "";
                                                 let fio = "", dul = "", birth = "";
@@ -1298,30 +1127,26 @@ class AdapterMTSApi {
                                                     dul = `${xml.Document.FizDocSeries[0].replace(" ", "")} ${xml.Document.FizDocNumber[0]}`;
                                                     birth = xml.Document.Birth[0];
                                                 }
-                                                sims[j].dpCode = dpCode;
-                                                sims[j].assignedDpCode = assignedDpCode;
-                                                sims[j].fio = fio;
-                                                sims[j].dul = dul;
-                                                sims[j].birth = birth;
-                                                sims[j].jtype = jru[journalParams][i];
-                                                sims[j].date = sdocdate.format("DD.MM.YYYY");
+                                                arr[j].dpCode = dpCode;
+                                                arr[j].assignedDpCode = assignedDpCode;
+                                                arr[j].fio = fio;
+                                                arr[j].dul = dul;
+                                                arr[j].birth = birth;
+                                                arr[j].jtype = jru[journalParams][i];
+                                                arr[j].date = sdocdate.format("DD.MM.YYYY");
                                                 break;
                                             }
                                         }
                                     }
-
-
                                 }
-                              
-
 
 
                                 obj.schema.push({name: 'msisdn', type: 'string', title: 'MSISDN'});
                                 obj.schema.push({name: 'icc', type: 'string', title: 'ICC'});
-                                obj.schema.push({name: 'date', type: 'date', title: 'Дата продажи в журнале'});
-                                obj.schema.push({name: 'd_sold', type: 'date', title: 'Дата продажи в справочнике'});
                                 obj.schema.push({name: 'jtype', type: 'string', title: 'Журнал-источник'});
+                                obj.schema.push({name: 'date', type: 'date', title: 'Дата продажи в журнале'});
                                 obj.schema.push({name: 'jtype_sim', type: 'string', title: 'Справочник-источник'});
+                                obj.schema.push({name: 'd_sold', type: 'date', title: 'Дата продажи в справочнике'});
                                 obj.schema.push({name: 'owner', type: 'string', title: 'Владелец'});
                                 obj.schema.push({name: 'plan', type: 'string', title: 'ТП'});
                                 obj.schema.push({name: 'fs', type: 'string', title: 'ФС'});
@@ -1339,12 +1164,71 @@ class AdapterMTSApi {
                                 // добавим в схему доп поля, которые пришли от пользователя
                                 for (let i = 0; i < sims.length; i++) {
                                     for (let key in sims[i]) {
-                                        let s = obj.schema.find(item=> item.name == key);
-                                        if (typeof s === "undefined") obj.schema.push({name: key, type: 'string', title: key});
+                                        if (key !== "MSISDN") {
+                                            let s = obj.schema.find(item=> item.name == key);
+                                            if (typeof s === "undefined") { 
+                                                obj.schema.push({name: key, type: 'string', title: key});
+                                            }
+                                            let item = arr.find(item=> item.msisdn == sims[i].MSISDN);
+                                            if (typeof item !== "undefined") item[key] = sims[i][key];
+                                        }
                                     }
                                 }
 
-                                obj.list = sims;
+                                // теперь расположить в таком же порядке, что и пришли от пользователя
+                                let newArr = [];
+                                for (let i = 0; i < sims.length; i++) {
+                                    let a = arr.find(item=> item.msisdn == sims[i].MSISDN);
+                                    if (typeof a !== "undefined") newArr.push(a);
+                                }
+
+                                // есть вариант, что симка находится в справочнике um_data со статусом продана, но сам документ находится в архиве
+                                // в таком случае надо залезть в архив взять данные оттуда. Этот вариант используется только если для рассмотрения 
+                                // выбран параметр только журнал
+                                // if (journalParams == "journal") {
+                                //     let arr = [];
+                                //     for (let i = 0; i < newArr.length; i++) {
+                                //         if (newArr[i].d_sold != "-" && newArr[i].jtype_sim == "Журнал" && typeof newArr[i].date === "undefined") {
+                                //             arr.push({msisdn: newArr[i].msisdn, icc: newArr[i].icc});
+                                //         }
+                                //     }
+                                //     if (arr.length > 0) {
+                                //         let likeArr = [];
+                                //         for (let i = 0; i < arr.length; i++) likeArr.push(`digest LIKE '%${arr[i].msisdn}%'`);
+                                //         let rows = await toolbox.sqlRequest(base, `
+                                //             SELECT * FROM archive 
+                                //             WHERE ${likeArr.join(" OR ")}
+                                //         `);
+                                //         for (let i = 0; i < rows.length; i++) {
+                                //             let xml = await toolbox.xmlToJs(rows[i].data);
+                                //             if (typeof xml.Document.MSISDN[0] !== "undefined" && typeof xml.Document.ICC[0] !== "undefined") {
+                                //                 let item = newArr.find(item=> item.msisdn == xml.Document.MSISDN[0] && item.icc == xml.Document.ICC[0]);
+                                //                 if (typeof item !== "undefined") {
+                                //                     let sdocdate = toolbox.moment(rows[i].jdocdate, "YYYYMMDD");
+                                //                     let dpCode = "", assignedDpCode = "";
+                                //                     let fio = "", dul = "", birth = "";
+                                //                     if (typeof xml.Document.DPCodeKind !== "undefined" && typeof xml.Document.DPCodeKind[0] !== "undefined") dpCode = xml.Document.DPCodeKind[0];
+                                //                     if (typeof xml.Document.AssignedDPCode !== "undefined" && typeof xml.Document.AssignedDPCode[0] !== "undefined") assignedDpCode = xml.Document.AssignedDPCode[0];
+                                //                     if (showUserData) {
+                                //                         fio = `${xml.Document.LastName[0]} ${xml.Document.FirstName[0]} ${xml.Document.SecondName[0]}`;
+                                //                         dul = `${xml.Document.FizDocSeries[0].replace(" ", "")} ${xml.Document.FizDocNumber[0]}`;
+                                //                         birth = xml.Document.Birth[0];
+                                //                     }
+                                //                     item.dpCode = dpCode;
+                                //                     item.assignedDpCode = assignedDpCode;
+                                //                     item.fio = fio;
+                                //                     item.dul = dul;
+                                //                     item.birth = birth;
+                                //                     item.jtype = "Архив";
+                                //                     item.date = sdocdate.format("DD.MM.YYYY");
+                                //                 }
+                                //             }
+                                //         }
+                                //     }
+                                // }
+ 
+
+                                obj.list = newArr;
                             }   
                         }
                     }
