@@ -184,6 +184,14 @@ class Core {
 					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
 				]
 			},
+			{name: 'abonent_categories', description: 'Справочник категорий абонентов', table: 'dict_abonent_categories', type: 'dict',
+				fields: [
+					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
+					{name: 'uid', type: 'string', title: 'UID', sqlType: 'VARCHAR', len: 50, minLen: 1, unique: true},
+					{name: 'title', type: 'string', title: 'Наименование', sqlType: 'VARCHAR', len: 100, unique: false},
+					{name: 'status', type: 'number', title: 'Статус', sqlType: 'INT', len: 1, foreignKey: 'statuses.id', unique: false}
+				]
+			},
 			{name: 'visible_fields', description: 'Справочник видимых полей справочников', table: 'dict_visible_fields', type: 'dict',
 				fields: [
 					{name: 'id', type: 'number', title: 'ID', sqlType: 'INT', len: 5, autoIncrement: true, primaryKey: true, unique: true},
